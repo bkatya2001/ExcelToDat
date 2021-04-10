@@ -1,4 +1,4 @@
-### Convertor tables to .dat
+### Convertor of tables to .dat
 
 Данное десктопное приложение позволяет выбрать excel-файл с компьютера 
 и преобразовать его в .dat-файл.
