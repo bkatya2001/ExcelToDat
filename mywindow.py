@@ -1,10 +1,10 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget
-from PyQt5.QtWidgets import QVBoxLayout, QPushButton
+from PyQt5.QtWidgets import QMainWindow, QWidget, QMessageBox
+from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QFileDialog
 from PyQt5.QtCore import QSize, pyqtSlot
 import pandas as pd
-import sys
 
+data = pd.DataFrame()
 
 # Наследуемся от QMainWindow
 class MainWindow(QMainWindow):
@@ -21,44 +21,57 @@ class MainWindow(QMainWindow):
         self.vertical_layout = QVBoxLayout() # Вертикальная расстановка
         self.central_widget.setLayout(self.vertical_layout)
         
+        self.horizontal_layout = QHBoxLayout() # Горизонтальная расстановка
+        
         self.table = QTableWidget(self) # Пустая таблица
 
         # Кнопки
         self.get_btn = QPushButton("Choose file", self)
         self.get_btn.clicked.connect(self.choose_file)
-        self.convert_btn = QPushButton("Get .dat", self)
+        self.convert_btn = QPushButton("Get .data", self)
         self.convert_btn.clicked.connect(self.convert_data)
+        self.graph_btn = QPushButton("Get graph", self)
+        self.graph_btn.clicked.connect(self.get_graph)
         
         # Добавление компонентов в расстановку
         self.vertical_layout.addWidget(self.get_btn)
-        self.vertical_layout.addStretch(1)
         self.vertical_layout.addWidget(self.table)
-        self.vertical_layout.addStretch(1)
-        self.vertical_layout.addWidget(self.convert_btn)
+        self.horizontal_layout.addWidget(self.convert_btn)
+        self.horizontal_layout.addWidget(self.graph_btn)
+        self.vertical_layout.addLayout(self.horizontal_layout)
+        
+        # Возможность редактирования данных
+        self.table.cellChanged.connect(self.change_cell)
 
     @pyqtSlot()
     def choose_file(self):
+        global data
+        
         filename = QFileDialog.getOpenFileName(self, "Выбрать таблицу",
                                                ".", "Excel Workbook (*.xlsx)")
-        self.data = pd.read_excel(filename[0])
-        headers = self.data.columns.to_list()
+        data = pd.read_excel(filename[0])
+        headers = data.columns.to_list()
         
         self.table.setColumnCount(len(headers))
-        self.table.setRowCount(len(self.data))
+        self.table.setRowCount(len(data))
         self.table.setHorizontalHeaderLabels(headers)
         
         for i in range(len(headers)):
-            for j in range(len(self.data)):
-                self.table.setItem(j, i, QTableWidgetItem(str(self.data.iloc[j, i])))
+            for j in range(len(data)):
+                self.table.setItem(j, i, QTableWidgetItem(str(data.iloc[j, i])))
                 
         # делаем ресайз колонок по содержимому
         self.table.resizeColumnsToContents()
 
     def convert_data(self):
-        self.data.to_csv('out.dat', header=False, index=False)
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    mw = MainWindow()
-    mw.show()
-    sys.exit(app.exec())
+        global data
+        data.to_csv('out.data', header=False, index=False)
+        QMessageBox.about(self, "Conversion", "Conversion completed")
+        
+    def get_graph(self):
+        global data
+        print(data)
+        
+    def change_cell(self, row, column):
+        data.loc[row, data.columns[column]] = self.table.item(row, column).text()
+        
