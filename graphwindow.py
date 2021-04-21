@@ -20,15 +20,15 @@ class GraphWindow(QMainWindow):
         self.graphWidget.setBackground('w')
         self.graphWidget.setTitle("Graph")
         self.graphWidget.setLabel('left', 'Values')
-        self.graphWidget.setLabel('bottom', mw.x)
+        self.graphWidget.setLabel('bottom', mw.x_name)
         self.graphWidget.showGrid(x=True, y=True)
         self.graphWidget.addLegend()
         self.setCentralWidget(self.graphWidget)
 
         # plot data: x, y values
         for col in mw.data.columns:
-            if col != mw.data.columns[0]:
-                self.plot(mw.x, list(map(lambda d: float(d), mw.data[col])), col)
+            if col != mw.x_name:
+                self.plot(mw.x, list(mw.data[col]), col)
 
     def plot(self, x, y, plotname):
         color = get_color()

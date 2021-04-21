@@ -7,8 +7,19 @@ import pandas as pd
 
 data = pd.DataFrame()
 x = []
+x_name = ""
 
 # Наследуемся от QMainWindow
+def check_data():
+    for col in data.columns:
+        for i in range(len(data)):
+            try:
+                data[col][i] = float(data[col][i])
+            except ValueError:
+                return False
+    return True
+
+
 class MainWindow(QMainWindow):
     # Переопределяем конструктор класса
     def __init__(self):
@@ -16,7 +27,7 @@ class MainWindow(QMainWindow):
         QMainWindow.__init__(self)
 
         self.setMinimumSize(QSize(480, 80))
-        self.setWindowTitle("Convertor from .xlsx to .dat")
+        self.setWindowTitle("Convertor from .xlsx to .data")
         self.central_widget = QWidget(self)  # Создаём центральный виджет
         self.setCentralWidget(self.central_widget)
 
@@ -34,6 +45,8 @@ class MainWindow(QMainWindow):
         self.convert_btn.clicked.connect(self.convert_data)
         self.graph_btn = QPushButton("Get graph", self)
         self.graph_btn.clicked.connect(self.get_graph)
+        self.convert_btn.setEnabled(True)
+        self.graph_btn.setEnabled(True)
 
         # Добавление компонентов в расстановку
         self.vertical_layout.addWidget(self.get_btn)
@@ -49,10 +62,13 @@ class MainWindow(QMainWindow):
     def choose_file(self):
         global data
         global x
+        global x_name
+
         filename = QFileDialog.getOpenFileName(self, "Выбрать таблицу",
                                                ".", "Excel Workbook (*.xlsx)")
         data = pd.read_excel(filename[0])
-        x = list(map(lambda d: float(d), data['A']))
+        x = list(data[data.columns[0]])
+        x_name = data.columns[0]
         headers = data.columns.to_list()
 
         self.table.setColumnCount(len(headers))
@@ -66,9 +82,17 @@ class MainWindow(QMainWindow):
         # делаем ресайз колонок по содержимому
         self.table.resizeColumnsToContents()
 
+        if not check_data():
+            QMessageBox.about(self, "Error", "Incorrect type of data")
+            self.convert_btn.setEnabled(False)
+            self.graph_btn.setEnabled(False)
+        else:
+            self.convert_btn.setEnabled(True)
+            self.graph_btn.setEnabled(True)
+
     def convert_data(self):
         global data
-        data.to_csv('out.data', header=False, index=False)
+        data.to_csv('out.data', sep=' ', header=False, index=False)
         QMessageBox.about(self, "Conversion", "Conversion completed")
 
     def get_graph(self):
