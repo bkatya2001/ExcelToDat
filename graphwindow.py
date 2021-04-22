@@ -26,7 +26,7 @@ class GraphWindow(QMainWindow):
         self.setCentralWidget(self.graphWidget)
 
         # plot data: x, y values
-        for col in mw.data.columns:
+        for col in mw.y:
             if col != mw.x_name:
                 self.plot(mw.x, list(mw.data[col]), col)
 
