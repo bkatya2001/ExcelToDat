@@ -2,20 +2,21 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QMessageBox, QCheckBox
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QFileDialog
 from PyQt5.QtCore import QSize, pyqtSlot, Qt
-from PyQt5.uic.properties import QtCore
 
 import graphwindow as gw
 import pandas as pd
 
-data = pd.DataFrame()
-x = []
+data = pd.DataFrame()  # Data from excel
+x = []  # Data for x
 x_name = ""
-y = []
-type_flag = False
+y = []  # Chosen columns
+type_flag = False  # Необходимо для проверки данных на соответствие типу данных (число)
+table_ready = False
 
-# Наследуемся от QMainWindow
+
 def check_data():
     global type_flag
+
     for col in data.columns:
         for i in range(len(data)):
             try:
@@ -44,8 +45,7 @@ class MainWindow(QMainWindow):
         self.horizontal_layout = QHBoxLayout()  # Горизонтальная расстановка
 
         self.table = QTableWidget(self)  # Пустая таблица
-        # Возможность редактирования данных
-        self.table.cellChanged.connect(self.change_cell)
+        self.table.cellChanged.connect(self.change_cell)  # Возможность редактирования данных
 
         # Кнопки
         self.get_btn = QPushButton("Choose file", self)
@@ -54,8 +54,8 @@ class MainWindow(QMainWindow):
         self.convert_btn.clicked.connect(self.convert_data)
         self.graph_btn = QPushButton("Get graph", self)
         self.graph_btn.clicked.connect(self.get_graph)
-        self.convert_btn.setEnabled(True)
-        self.graph_btn.setEnabled(True)
+        self.convert_btn.setEnabled(False)
+        self.graph_btn.setEnabled(False)
 
         # Добавление компонентов в расстановку
         self.vertical_layout.addWidget(self.get_btn)
@@ -69,51 +69,63 @@ class MainWindow(QMainWindow):
         global data
         global x
         global x_name
+        global type_flag
+        global table_ready
 
         filename = QFileDialog.getOpenFileName(self, "Выбрать таблицу",
                                                ".", "Excel Workbook (*.xlsx)")
-        data = pd.read_excel(filename[0])
-        x = list(data[data.columns[0]])
-        x_name = data.columns[0]
-        headers = data.columns.to_list()
 
-        self.table.setColumnCount(len(headers))
-        self.table.setRowCount(len(data))
-        self.table.setHorizontalHeaderLabels(headers)
+        if filename[0] != "":
+            type_flag = False
+            table_ready = False
+            data = pd.read_excel(filename[0])
+            headers = data.columns.to_list()
 
-        for i in range(len(headers)):
-            for j in range(len(data)):
-                self.table.setItem(j, i, QTableWidgetItem(str(data.iloc[j, i])))
+            self.table.setColumnCount(len(headers))
+            self.table.setRowCount(len(data))
+            self.table.setHorizontalHeaderLabels(headers)
 
-        self.table.insertRow(len(data))
-        for i in range(len(headers)):
-            item = QTableWidgetItem()
-            item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
-            item.setCheckState(Qt.Unchecked)
-            self.table.setItem(len(data), i, item)
+            for i in range(len(headers)):
+                for j in range(len(data)):
+                    self.table.setItem(j, i, QTableWidgetItem(str(data.iloc[j, i])))
 
-        # делаем ресайз колонок по содержимому
-        self.table.resizeColumnsToContents()
+            self.table.insertRow(len(data))  # Добавляем ряд с checkbox
+            for i in range(1, len(headers)):
+                item = QTableWidgetItem()
+                item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+                item.setCheckState(Qt.Unchecked)
+                self.table.setItem(len(data), i, item)
 
-        if not check_data():
-            QMessageBox.about(self, "Error", "Incorrect type of data")
-            self.convert_btn.setEnabled(False)
-            self.graph_btn.setEnabled(False)
-        else:
-            self.convert_btn.setEnabled(True)
-            self.graph_btn.setEnabled(True)
+            # делаем ресайз колонок по содержимому
+            self.table.resizeColumnsToContents()
+
+            if not check_data():
+                QMessageBox.about(self, "Error", "Incorrect type of data")
+                self.convert_btn.setEnabled(False)
+                self.graph_btn.setEnabled(False)
+            else:
+                self.convert_btn.setEnabled(True)
+                self.graph_btn.setEnabled(True)
+
+            table_ready = True
 
     def convert_data(self):
         global data
+
         data.to_csv('out.data', sep=' ', header=False, index=False)
         QMessageBox.about(self, "Conversion", "Conversion completed")
 
     def get_graph(self):
         global data
         global y
+        global x
+        global x_name
+
+        x = list(data[data.columns[0]])
+        x_name = data.columns[0]
 
         y.clear()
-        for i in range(self.table.columnCount()):
+        for i in range(1, self.table.columnCount()):
             if self.table.item(len(data), i).checkState() == Qt.Checked:
                 y.append(data.columns[i])
 
@@ -122,15 +134,18 @@ class MainWindow(QMainWindow):
 
     def change_cell(self, row, column):
         global type_flag
+        global table_ready
 
-        if row != len(data):
+        if row != len(data) and table_ready:
+            data.iloc[row, column] = self.table.item(row, column).text()
             try:
                 value = float(self.table.item(row, column).text())
                 data.iloc[row, column] = value
-                self.convert_btn.setEnabled(True)
-                self.graph_btn.setEnabled(True)
             except (TypeError, ValueError):
-                if type_flag:
-                    QMessageBox.about(self, "Error", "Incorrect type of data")
+                QMessageBox.about(self, "Error", "Incorrect type of data")
                 self.convert_btn.setEnabled(False)
                 self.graph_btn.setEnabled(False)
+
+            if check_data():
+                self.convert_btn.setEnabled(True)
+                self.graph_btn.setEnabled(True)
