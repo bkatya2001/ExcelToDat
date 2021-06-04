@@ -2,6 +2,7 @@ import random
 
 from PyQt5.QtWidgets import QMainWindow
 import pyqtgraph as pg
+import pyqtgraph.exporters
 import mywindow as mw
 
 
@@ -28,9 +29,19 @@ class GraphWindow(QMainWindow):
         # plot data: x, y values
         for col in mw.y:
             if col != mw.x_name:
-                self.plot(mw.x, list(mw.data[col]), col)
+                plt = self.plot(mw.x, list(mw.data[col]), col)
+
+        self.save_graph("Graph")
 
     def plot(self, x, y, plotname):
         color = get_color()
         pen = pg.mkPen(color=(color[0], color[1], color[2]))
-        self.graphWidget.plot(x, y, name=plotname, pen=pen)
+        return self.graphWidget.plot(x, y, name=plotname, pen=pen)
+
+    def save_graph(self, filename):
+        exporter = pg.exporters.ImageExporter(self.graphWidget.plotItem)
+        exporter.params.param('width').setValue(self.graphWidget.range.width(), blockSignal=exporter.widthChanged)
+        exporter.params.param('height').setValue(self.graphWidget.range.height(), blockSignal=exporter.heightChanged)
+
+        # save to file
+        exporter.export(filename + '.png')
