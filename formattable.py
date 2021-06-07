@@ -9,7 +9,7 @@ data = pd.read_excel(filename, index="index")
 headers = list(map(lambda x: str(x), data.columns.to_list()))
 print(len(headers))
 
-#Получим bool-массив для определения NAN
+# Получим bool-массив для определения NAN
 data_bool = data.isna()
 
 headers_new = []

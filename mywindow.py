@@ -127,7 +127,7 @@ class MainWindow(QMainWindow):
         y.clear()
         for i in range(1, self.table.columnCount()):
             if self.table.item(len(data), i).checkState() == Qt.Checked:
-                y.append(data.columns[i])
+                y.append(data.columns[i])  # Add labels of columns
 
         self.graph_win = gw.GraphWindow()
         self.graph_win.show()
