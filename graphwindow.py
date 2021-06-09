@@ -19,6 +19,7 @@ class GraphWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
 
+        self.file_path = ""
         # Создаём поле для графика
         self.graphWidget = pg.PlotWidget()
         self.graphWidget.setBackground('w')

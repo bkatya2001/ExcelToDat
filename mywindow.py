@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QMessageBox, QCheckBox
+from PyQt5.QtWidgets import QMainWindow, QWidget, QMessageBox
 from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QFileDialog
 from PyQt5.QtCore import QSize, pyqtSlot, Qt
