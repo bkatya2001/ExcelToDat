@@ -127,3 +127,4 @@ dmypy.json
 #personal
 .data
 .png
+Tests/
