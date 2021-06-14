@@ -79,3 +79,4 @@ class FileWindow(QMainWindow):
     def add_test(self):
         self.aw = aw.AddWindow()
         self.aw.show()
+        self.close()
