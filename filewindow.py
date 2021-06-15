@@ -2,13 +2,13 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QLabel, QScrollArea, QGroupBox
 from PyQt5.QtWidgets import QVBoxLayout, QPushButton
 from PyQt5.QtCore import QSize
 import os
-import graphwindow as gw
 import addwindow as aw
+import datawindow as dw
 
 # Путь к папке с испытаниями и директории оттуда
 path = os.getcwd() + "\\Tests"
 files = os.listdir(path)
-
+fpath = ""
 
 # Окно-проводник по существующим испытаниям
 class FileWindow(QMainWindow):
@@ -66,13 +66,17 @@ class FileWindow(QMainWindow):
         self.central_widget.setLayout(self.vertical_layout)
 
     def button_pushed(self, file_path):
+        global fpath
         folders = file_path.split('\\')
         # Файлы открываем, испытания - вызываем другое окно
         if folders[len(folders) - 2] == 'Tests':
-            self.gw = gw.GraphWindow()
-            self.gw.file_path = file_path
-            self.gw.show()
-            print(self.gw.file_path)
+            xlsx = os.listdir(file_path)
+            for i in xlsx:
+                if ".xlsx" not in i:
+                    xlsx.remove(i)
+            fpath = file_path + "\\" + xlsx[0]
+            self.dw = dw.DataWindow()
+            self.dw.show()
         else:
             os.system(file_path)
 
