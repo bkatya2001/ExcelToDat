@@ -70,13 +70,10 @@ class FileWindow(QMainWindow):
         folders = file_path.split('\\')
         # Файлы открываем, испытания - вызываем другое окно
         if folders[len(folders) - 2] == 'Tests':
-            xlsx = os.listdir(file_path)
-            for i in xlsx:
-                if ".xlsx" not in i:
-                    xlsx.remove(i)
-            fpath = file_path + "\\" + xlsx[0]
+            fpath = file_path
             self.dw = dw.DataWindow()
             self.dw.show()
+            self.close()
         else:
             os.system(file_path)
 

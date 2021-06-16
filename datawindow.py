@@ -1,3 +1,5 @@
+import os
+
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QPushButton, QFileDialog, \
     QTableWidgetItem, QMessageBox
@@ -33,7 +35,11 @@ class DataWindow(QMainWindow):
         QMainWindow.__init__(self)
 
         global file_path
-        file_path = fw.fpath
+        xlsx = os.listdir(fw.fpath)
+        for i in xlsx:
+            if ".xlsx" not in i:
+                xlsx.remove(i)
+        file_path = fw.fpath + "\\" + xlsx[0]
 
         self.setMinimumSize(QSize(480, 80))
         self.setWindowTitle("Convertor from .xlsx to .data")
@@ -53,6 +59,8 @@ class DataWindow(QMainWindow):
         self.convert_btn.clicked.connect(self.convert_data)
         self.graph_btn = QPushButton("Get graph", self)
         self.graph_btn.clicked.connect(self.get_graph)
+        self.return_btn = QPushButton("Назад", self)
+        self.return_btn.clicked.connect(self.return_page)
         self.convert_btn.setEnabled(False)
         self.graph_btn.setEnabled(False)
 
@@ -61,6 +69,7 @@ class DataWindow(QMainWindow):
         self.horizontal_layout.addWidget(self.convert_btn)
         self.horizontal_layout.addWidget(self.graph_btn)
         self.vertical_layout.addLayout(self.horizontal_layout)
+        self.vertical_layout.addWidget(self.return_btn)
 
         self.create_table()
 
@@ -108,8 +117,9 @@ class DataWindow(QMainWindow):
 
     def convert_data(self):
         global data
+        global file_path
 
-        data.to_csv('out.data', sep=' ', header=False, index=False)
+        data.to_csv(fw.fpath + '\\out.data', sep=' ', header=False, index=False)
         QMessageBox.about(self, "Conversion", "Conversion completed")
 
     def get_graph(self):
@@ -146,3 +156,8 @@ class DataWindow(QMainWindow):
             if check_data():
                 self.convert_btn.setEnabled(True)
                 self.graph_btn.setEnabled(True)
+
+    def return_page(self):
+        self.fw = fw.FileWindow()
+        self.fw.show()
+        self.close()
