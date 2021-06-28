@@ -1,7 +1,6 @@
 from PyQt5.QtWidgets import QApplication
 import sys
 import os
-import mywindow as mw
 import filewindow as fw
 
 if __name__ == "__main__":
