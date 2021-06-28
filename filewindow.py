@@ -10,6 +10,7 @@ path = os.getcwd() + "\\Tests"
 files = os.listdir(path)
 fpath = ""
 
+
 # Окно-проводник по существующим испытаниям
 class FileWindow(QMainWindow):
     def __init__(self):
@@ -51,7 +52,8 @@ class FileWindow(QMainWindow):
                     self.button.setStyleSheet('background: transparent')
                     # В обработчик нажатия передаём путь, чтобы определять, что нужно открыть
                     self.button.clicked.connect(
-                        lambda state, file_path=(path + '\\' + files[i] + '\\' + inner_files[j]): self.button_pushed(file_path))
+                        lambda state, file_path=(path + '\\' + files[i] + '\\' + inner_files[j]): self.button_pushed(
+                            file_path))
                     self.inner_layout.addWidget(self.button)
 
             self.box.setLayout(self.inner_layout)

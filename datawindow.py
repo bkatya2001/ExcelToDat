@@ -1,7 +1,7 @@
 import os
 
 from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QPushButton, QFileDialog, \
+from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QPushButton, \
     QTableWidgetItem, QMessageBox
 import pandas as pd
 import graphwindow as gw
@@ -13,10 +13,10 @@ x_name = ""
 y = []  # Chosen columns
 type_flag = False  # Необходимо для проверки данных на соответствие типу данных (число)
 table_ready = False
-file_path = ""
+file_path = ""  # Отвечает за путь к .xlsx файлу
 
 
-def check_data():
+def check_data():  # Проверка корректности введённых данных в таблицу
     global type_flag
 
     for col in data.columns:
@@ -35,14 +35,17 @@ class DataWindow(QMainWindow):
         QMainWindow.__init__(self)
 
         global file_path
+
+        # Находим файл с таблицей
         xlsx = os.listdir(fw.fpath)
         for i in xlsx:
             if ".xlsx" not in i:
                 xlsx.remove(i)
         file_path = fw.fpath + "\\" + xlsx[0]
 
+        # Настройка окна
         self.setMinimumSize(QSize(480, 80))
-        self.setWindowTitle("Convertor from .xlsx to .data")
+        self.setWindowTitle("Конвертация из .xlsx в .data")
         self.central_widget = QWidget(self)  # Создаём центральный виджет
         self.setCentralWidget(self.central_widget)
 
@@ -55,9 +58,9 @@ class DataWindow(QMainWindow):
         self.table.cellChanged.connect(self.change_cell)  # Возможность редактирования данных
 
         # Кнопки
-        self.convert_btn = QPushButton("Get .data", self)
+        self.convert_btn = QPushButton("Конвертировать в .data", self)
         self.convert_btn.clicked.connect(self.convert_data)
-        self.graph_btn = QPushButton("Get graph", self)
+        self.graph_btn = QPushButton("Построить график", self)
         self.graph_btn.clicked.connect(self.get_graph)
         self.return_btn = QPushButton("Назад", self)
         self.return_btn.clicked.connect(self.return_page)
@@ -106,7 +109,7 @@ class DataWindow(QMainWindow):
             self.table.resizeColumnsToContents()
 
             if not check_data():
-                QMessageBox.about(self, "Error", "Incorrect type of data")
+                QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
                 self.convert_btn.setEnabled(False)
                 self.graph_btn.setEnabled(False)
             else:
@@ -120,7 +123,7 @@ class DataWindow(QMainWindow):
         global file_path
 
         data.to_csv(fw.fpath + '\\out.data', sep=' ', header=False, index=False)
-        QMessageBox.about(self, "Conversion", "Conversion completed")
+        QMessageBox.about(self, "Конвертация", "Конвертация завершена")
 
     def get_graph(self):
         global data
@@ -129,7 +132,7 @@ class DataWindow(QMainWindow):
         global x_name
 
         x_name = data.columns[0]
-        data = data.sort_values(by=x_name)
+        data = data.sort_values(by=x_name)  # Сортируем данные по возрастанию x
         x = list(data[data.columns[0]])
 
         y.clear()
@@ -151,7 +154,7 @@ class DataWindow(QMainWindow):
                 value = float(self.table.item(row, column).text())
                 data.iloc[row, column] = value
             except (TypeError, ValueError):
-                QMessageBox.about(self, "Error", "Incorrect type of data")
+                QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
                 self.convert_btn.setEnabled(False)
                 self.graph_btn.setEnabled(False)
 

@@ -1,19 +1,19 @@
-import pandas as pd
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QWidget, QTableWidget, QTableWidgetItem
 import graphwindow as gw
 import datawindow as dw
 from scipy.signal import savgol_filter
 
-y_filtered = {}
+y_filtered = {}  # Фильтрованные данные (y)
 
 
 class FilterWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
 
+        # Настройка окна
         self.setMinimumSize(QSize(480, 80))
-        self.setWindowTitle("Choose graph")
+        self.setWindowTitle("Выбрать графики для фильтрации")
 
         self.central_widget = QWidget(self)  # Создаём центральный виджет
         self.setCentralWidget(self.central_widget)
@@ -21,7 +21,7 @@ class FilterWindow(QMainWindow):
         self.table = QTableWidget(self)  # Пустая таблица
         self.table.setColumnCount(2)
         self.table.setRowCount(len(dw.y))
-        self.table.setHorizontalHeaderLabels(['Name', ''])
+        self.table.setHorizontalHeaderLabels(['Название', ''])
         for i in range(len(dw.y)):
             self.table.setItem(i, 0, QTableWidgetItem(str(dw.y[i])))
             item = QTableWidgetItem()
@@ -29,7 +29,8 @@ class FilterWindow(QMainWindow):
             item.setCheckState(Qt.Unchecked)
             self.table.setItem(i, 1, item)
 
-        self.filter_btn = QPushButton("Filter", self)
+        # Кнопки
+        self.filter_btn = QPushButton("Фильтровать", self)
         self.filter_btn.clicked.connect(self.filter_data)
         self.return_btn = QPushButton('Назад', self)
         self.return_btn.clicked.connect(self.return_back)

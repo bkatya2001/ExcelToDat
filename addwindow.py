@@ -14,6 +14,7 @@ class AddWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
 
+        # Настройка окна
         self.setMinimumSize(QSize(480, 80))
         self.setWindowTitle("Добавить испытание")
         self.central_widget = QWidget(self)  # Создаём центральный виджет
@@ -28,15 +29,19 @@ class AddWindow(QMainWindow):
         self.data_edit = QTextEdit()
         self.form_layout.addRow(QLabel("Дополнительная информация:"), self.data_edit)
         self.vertical_layout.addLayout(self.form_layout)
+
         choose_btn = QPushButton("Выбрать .xlsx файл")
         choose_btn.clicked.connect(self.choose_file)
         self.vertical_layout.addWidget(choose_btn)
+
         self.file_lbl = QLabel("")
         self.vertical_layout.addWidget(self.file_lbl)
+
         self.create_btn = QPushButton("Создать испытание")
         self.create_btn.clicked.connect(self.create_test)
         self.create_btn.setEnabled(False)
         self.vertical_layout.addWidget(self.create_btn)
+
         self.central_widget.setLayout(self.vertical_layout)
 
     def choose_file(self):  # Выбор файла с таблицей
@@ -54,13 +59,16 @@ class AddWindow(QMainWindow):
             if not (text in fw.files):
                 path = fw.path + '\\' + text
                 os.mkdir(path)
-                shutil.copy(self.file_lbl.text(), path)
+                shutil.copy(self.file_lbl.text(), path)  # Копируем файл с таблицей
+
+                # Формируем файл с дополнительной информацией
                 meta_file = open(path + "\\metadata.txt", "w")
                 meta_file.write(str(datetime.datetime.now()) + '\n')
                 meta_file.write("Название испытания: " + text + "\n")
                 meta_file.write("Ф.И.О. сотрудника: " + self.person_edit.text() + '\n')
                 meta_file.write("Дополнительная информация: " + self.data_edit.toPlainText())
                 meta_file.close()
+
                 fw.files.append(text)
                 self.close()
                 self.fw = fw.FileWindow()

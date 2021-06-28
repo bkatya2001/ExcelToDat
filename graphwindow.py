@@ -1,6 +1,6 @@
 import random
 
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QDesktopWidget, QApplication, \
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QApplication, \
     QInputDialog, QMessageBox
 import pyqtgraph as pg
 import pyqtgraph.exporters
@@ -8,9 +8,9 @@ import datawindow as dw
 import filterwindow as fw
 import filewindow as filew
 
-additional_data_flag = False
-x_min = 0
-x_max = 0
+additional_data_flag = False  # Флаг, обозначающий, что данные нужно дополнить
+x_min = 0  # Нижняя граница дополнения
+x_max = 0  # Верхняя граница дополнения
 changed_flag = False
 
 
@@ -28,15 +28,16 @@ class GraphWindow(QMainWindow):
         # Создаём поле для графика
         self.originalGraphWidget = pg.PlotWidget()
         self.originalGraphWidget.setBackground('w')
-        self.originalGraphWidget.setTitle("Original graph")
+        self.originalGraphWidget.setTitle("Исходные данные")
         self.originalGraphWidget.setLabel('left', 'Values')
         self.originalGraphWidget.setLabel('bottom', dw.x_name)
         self.originalGraphWidget.showGrid(x=True, y=True)
         self.originalGraphWidget.addLegend()  # Описание: цвет - график
 
+        # Создаём поле для изменённого графика
         self.changedGraphWidget = pg.PlotWidget()
         self.changedGraphWidget.setBackground('w')
-        self.changedGraphWidget.setTitle("Changed graph")
+        self.changedGraphWidget.setTitle("Изменённые данные")
         self.changedGraphWidget.setLabel('left', 'Values')
         self.changedGraphWidget.setLabel('bottom', dw.x_name)
         self.changedGraphWidget.showGrid(x=True, y=True)
@@ -80,11 +81,13 @@ class GraphWindow(QMainWindow):
 
         # self.location_on_the_screen()
 
+    # Метод для отрисовки графика
     def plot(self, x, y, plotname, graphWidget):
         color = get_color()
         pen = pg.mkPen(color=(color[0], color[1], color[2]))
         return graphWidget.plot(x, y, name=plotname, pen=pen)
 
+    # Метод для сохранения картинок графиков
     def save_graph(self, graphWidget):
         exporter = pg.exporters.ImageExporter(graphWidget.plotItem)
         exporter.params.param('width').setValue(graphWidget.range.width(), blockSignal=exporter.widthChanged)
@@ -96,12 +99,14 @@ class GraphWindow(QMainWindow):
             # save to file
             exporter.export(filew.fpath + '\\' + text + '.png')
 
+    # Метод для отрисовки графиков в первый раз
     def draw_graph(self):
         for col in dw.y:
             if col != dw.x_name:
                 self.changed_plt.append(self.plot([0], [0], col, self.changedGraphWidget))
                 self.original_plt.append(self.plot(dw.x, list(dw.data[col]), col, self.originalGraphWidget))
 
+    # Метод для обновления данных на графиках
     def update_graph(self):
         global additional_data_flag
         global changed_flag
@@ -116,12 +121,12 @@ class GraphWindow(QMainWindow):
                     if fc == dw.y[col]:
                         flag = True
                         break
-                if flag:
+                if flag:  # Если эти данные были отфильтрованы
                     values = list(fw.y_filtered.get(dw.y[col]))
                     changed_flag = True
                 else:
                     values = list(dw.data[dw.y[col]])
-                if additional_data_flag:
+                if additional_data_flag:  # Если есть дополнения к графику
                     changed_flag = True
                     x = list(enumerate(dw.x, 0))
                     min_value = min(x, key=lambda j: j[1])
@@ -143,6 +148,7 @@ class GraphWindow(QMainWindow):
                     self.changed_plt[col].setData(dw.x, values)
                 self.original_plt[col].setData(dw.x, list(dw.data[dw.y[col]]))
 
+    # Дополнения к графику
     def add_data(self):
         global x_min
         global x_max
@@ -161,9 +167,9 @@ class GraphWindow(QMainWindow):
                         additional_data_flag = True
                         self.update_graph()
                     except ValueError:
-                        QMessageBox.about(self, "Error", "Incorrect type of data")
+                        QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
             except ValueError:
-                QMessageBox.about(self, "Error", "Incorrect type of data")
+                QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
 
     def filter_data(self):
         self.filter_win = fw.FilterWindow()
