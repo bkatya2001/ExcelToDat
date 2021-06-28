@@ -128,8 +128,9 @@ class DataWindow(QMainWindow):
         global x
         global x_name
 
-        x = list(data[data.columns[0]])
         x_name = data.columns[0]
+        data = data.sort_values(by=x_name)
+        x = list(data[data.columns[0]])
 
         y.clear()
         for i in range(1, self.table.columnCount()):
@@ -138,6 +139,7 @@ class DataWindow(QMainWindow):
 
         self.graph_win = gw.GraphWindow()
         self.graph_win.show()
+        self.close()
 
     def change_cell(self, row, column):
         global type_flag
