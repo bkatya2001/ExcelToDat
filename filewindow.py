@@ -61,9 +61,10 @@ class FileWindow(QMainWindow):
             self.scroll.setWidget(self.box)
             self.scroll.setWidgetResizable(True)
             self.vertical_layout.addWidget(self.scroll)
-            self.add_btn = QPushButton("Создать испытание", self)
-            self.add_btn.clicked.connect(self.add_test)
-            self.vertical_layout.addWidget(self.add_btn)
+
+        self.add_btn = QPushButton("Создать испытание", self)
+        self.add_btn.clicked.connect(self.add_test)
+        self.vertical_layout.addWidget(self.add_btn)
 
         self.central_widget.setLayout(self.vertical_layout)
 
