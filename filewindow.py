@@ -24,7 +24,7 @@ class FileWindow(QMainWindow):
 
         # Настройка окна
         self.setMinimumSize(QSize(480, 80))
-        self.setWindowTitle("ExcelToData")
+        self.setWindowTitle("Конвертация из .xlsx в .data")
         self.central_widget = QWidget(self)  # Создаём центральный виджет
         self.setCentralWidget(self.central_widget)
 
@@ -151,7 +151,7 @@ class FileWindow(QMainWindow):
             if name in projects:
                 QMessageBox.about(self, 'Ошибка', 'Проект с таким именем уже существует.')
             else:
-                pat = "[A-Za-zА-Яа-я0-9_-]"  # Шаблон для названия
+                pat = "[\w-]+"  # Шаблон для названия
                 if re.sub(pat, "", name, 1) == "":
                     os.mkdir(os.path.join(path, name))
                     projects.append(name)

@@ -30,16 +30,16 @@ class FilterWindow(QMainWindow):
             self.table.setItem(i, 1, item)
 
         # Кнопки
-        self.filter_btn = QPushButton("Фильтровать", self)
-        self.filter_btn.clicked.connect(self.filter_data)
-        self.return_btn = QPushButton('Назад', self)
-        self.return_btn.clicked.connect(self.return_back)
+        filter_btn = QPushButton("Фильтровать", self)
+        filter_btn.clicked.connect(self.filter_data)
+        return_btn = QPushButton('Назад', self)
+        return_btn.clicked.connect(self.return_back)
 
-        self.vertical_layout = QVBoxLayout()  # Вертикальная расстановка
-        self.vertical_layout.addWidget(self.table)
-        self.vertical_layout.addWidget(self.filter_btn)
-        self.vertical_layout.addWidget(self.return_btn)
-        self.central_widget.setLayout(self.vertical_layout)
+        vertical_layout = QVBoxLayout()  # Вертикальная расстановка
+        vertical_layout.addWidget(self.table)
+        vertical_layout.addWidget(filter_btn)
+        vertical_layout.addWidget(return_btn)
+        self.central_widget.setLayout(vertical_layout)
 
     def filter_data(self):
         global y_filtered

@@ -1,3 +1,4 @@
+import os
 import random
 
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QApplication, \
@@ -19,6 +20,13 @@ def get_color():
     g = random.randint(0, 255)
     b = random.randint(0, 255)
     return r, g, b
+
+
+# Метод для отрисовки графика
+def plot(x, y, plotname, graphWidget):
+    color = get_color()
+    pen = pg.mkPen(color=(color[0], color[1], color[2]))
+    return graphWidget.plot(x, y, name=plotname, pen=pen)
 
 
 class GraphWindow(QMainWindow):
@@ -44,36 +52,44 @@ class GraphWindow(QMainWindow):
         self.changedGraphWidget.addLegend()
 
         # Кнопки
-        self.filter_btn = QPushButton("Отфильтровать", self)
-        self.filter_btn.clicked.connect(self.filter_data)
-        self.addData_btn = QPushButton("Дополнить", self)
-        self.addData_btn.clicked.connect(self.add_data)
-        self.saveOrig_btn = QPushButton("Сохранить исходное изображение", self)
-        self.saveOrig_btn.clicked.connect(
+        return_files_btn = QPushButton("Выбрать другое испытание", self)
+        return_files_btn.clicked.connect(self.return_files)
+        return_data_btn = QPushButton("Выбрать другие зависимости", self)
+        return_data_btn.clicked.connect(self.return_data)
+        filter_btn = QPushButton("Отфильтровать", self)
+        filter_btn.clicked.connect(self.filter_data)
+        addData_btn = QPushButton("Дополнить", self)
+        addData_btn.clicked.connect(self.add_data)
+        saveOrig_btn = QPushButton("Сохранить исходное изображение", self)
+        saveOrig_btn.clicked.connect(
             lambda state, graphWidget=self.originalGraphWidget: self.save_graph(graphWidget))
-        self.saveChanged_btn = QPushButton("Сохранить изменённое изображение", self)
-        self.saveChanged_btn.clicked.connect(
+        saveChanged_btn = QPushButton("Сохранить изменённое изображение", self)
+        saveChanged_btn.clicked.connect(
             lambda state, graphWidget=self.changedGraphWidget: self.save_graph(graphWidget))
 
-        self.vertical_layout = QVBoxLayout()
-        self.graph_layout = QHBoxLayout()
-        self.graph_layout.addWidget(self.originalGraphWidget)
-        self.graph_layout.addWidget(self.changedGraphWidget)
-        self.vertical_layout.addLayout(self.graph_layout)
-        self.func_layout = QVBoxLayout()
-        self.func_layout.addWidget(self.filter_btn)
-        self.func_layout.addWidget(self.addData_btn)
-        self.save_layout = QVBoxLayout()
-        self.save_layout.addWidget(self.saveOrig_btn)
-        self.save_layout.addWidget(self.saveChanged_btn)
-        self.button_layout = QHBoxLayout()
-        self.button_layout.addLayout(self.func_layout)
-        self.button_layout.addLayout(self.save_layout)
-        self.vertical_layout.addLayout(self.button_layout)
+        vertical_layout = QVBoxLayout()
+        graph_layout = QHBoxLayout()
+        graph_layout.addWidget(self.originalGraphWidget)
+        graph_layout.addWidget(self.changedGraphWidget)
+        vertical_layout.addLayout(graph_layout)
+        func_layout = QVBoxLayout()
+        func_layout.addWidget(filter_btn)
+        func_layout.addWidget(addData_btn)
+        save_layout = QVBoxLayout()
+        save_layout.addWidget(saveOrig_btn)
+        save_layout.addWidget(saveChanged_btn)
+        button_layout = QHBoxLayout()
+        button_layout.addLayout(func_layout)
+        button_layout.addLayout(save_layout)
+        back_button_layout = QHBoxLayout()
+        back_button_layout.addWidget(return_data_btn)
+        back_button_layout.addWidget(return_files_btn)
+        vertical_layout.addLayout(button_layout)
+        vertical_layout.addLayout(back_button_layout)
 
         self.central_widget = QWidget(self)  # Создаём центральный виджет
         self.setCentralWidget(self.central_widget)
-        self.central_widget.setLayout(self.vertical_layout)
+        self.central_widget.setLayout(vertical_layout)
 
         self.original_plt = []
         self.changed_plt = []
@@ -81,11 +97,15 @@ class GraphWindow(QMainWindow):
 
         # self.location_on_the_screen()
 
-    # Метод для отрисовки графика
-    def plot(self, x, y, plotname, graphWidget):
-        color = get_color()
-        pen = pg.mkPen(color=(color[0], color[1], color[2]))
-        return graphWidget.plot(x, y, name=plotname, pen=pen)
+    def return_files(self):
+        self.file_win = filew.FileWindow()
+        self.file_win.show()
+        self.close()
+
+    def return_data(self):
+        self.data_win = dw.DataWindow()
+        self.data_win.show()
+        self.close()
 
     # Метод для сохранения картинок графиков
     def save_graph(self, graphWidget):
@@ -97,14 +117,14 @@ class GraphWindow(QMainWindow):
                                         'Введите название файла:')
         if ok:
             # save to file
-            exporter.export(filew.current_project + '\\' + text + '.png')
+            exporter.export(os.path.join(filew.path, filew.current_project, filew.current_test, text + '.png'))
 
     # Метод для отрисовки графиков в первый раз
     def draw_graph(self):
         for col in dw.y:
             if col != dw.x_name:
-                self.changed_plt.append(self.plot([0], [0], col, self.changedGraphWidget))
-                self.original_plt.append(self.plot(dw.x, list(dw.data[col]), col, self.originalGraphWidget))
+                self.changed_plt.append(plot([0], [0], col, self.changedGraphWidget))
+                self.original_plt.append(plot(dw.x, list(dw.data[col]), col, self.originalGraphWidget))
 
     # Метод для обновления данных на графиках
     def update_graph(self):

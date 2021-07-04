@@ -37,11 +37,11 @@ class DataWindow(QMainWindow):
         global file_path
 
         # Находим файл с таблицей
-        xlsx = os.listdir(fw.current_project)
+        xlsx = os.listdir(os.path.join(fw.path, fw.current_project, fw.current_test))
         for i in xlsx:
             if ".xlsx" not in i:
                 xlsx.remove(i)
-        file_path = fw.current_project + "\\" + xlsx[0]
+        file_path = os.path.join(fw.path, fw.current_project, fw.current_test, xlsx[0])
 
         # Настройка окна
         self.setMinimumSize(QSize(480, 80))
@@ -49,10 +49,10 @@ class DataWindow(QMainWindow):
         self.central_widget = QWidget(self)  # Создаём центральный виджет
         self.setCentralWidget(self.central_widget)
 
-        self.vertical_layout = QVBoxLayout()  # Вертикальная расстановка
-        self.central_widget.setLayout(self.vertical_layout)
+        vertical_layout = QVBoxLayout()  # Вертикальная расстановка
+        self.central_widget.setLayout(vertical_layout)
 
-        self.horizontal_layout = QHBoxLayout()  # Горизонтальная расстановка
+        horizontal_layout = QHBoxLayout()  # Горизонтальная расстановка
 
         self.table = QTableWidget(self)  # Пустая таблица
         self.table.cellChanged.connect(self.change_cell)  # Возможность редактирования данных
@@ -62,17 +62,17 @@ class DataWindow(QMainWindow):
         self.convert_btn.clicked.connect(self.convert_data)
         self.graph_btn = QPushButton("Построить график", self)
         self.graph_btn.clicked.connect(self.get_graph)
-        self.return_btn = QPushButton("Назад", self)
-        self.return_btn.clicked.connect(self.return_page)
+        return_btn = QPushButton("Назад", self)
+        return_btn.clicked.connect(self.return_page)
         self.convert_btn.setEnabled(False)
         self.graph_btn.setEnabled(False)
 
         # Добавление компонентов в расстановку
-        self.vertical_layout.addWidget(self.table)
-        self.horizontal_layout.addWidget(self.convert_btn)
-        self.horizontal_layout.addWidget(self.graph_btn)
-        self.vertical_layout.addLayout(self.horizontal_layout)
-        self.vertical_layout.addWidget(self.return_btn)
+        vertical_layout.addWidget(self.table)
+        horizontal_layout.addWidget(self.convert_btn)
+        horizontal_layout.addWidget(self.graph_btn)
+        vertical_layout.addLayout(horizontal_layout)
+        vertical_layout.addWidget(return_btn)
 
         self.create_table()
 
@@ -122,7 +122,7 @@ class DataWindow(QMainWindow):
         global data
         global file_path
 
-        data.to_csv(fw.current_project + '\\out.data', sep=' ', header=False, index=False)
+        data.to_csv(os.path.join(fw.path, fw.current_project, fw.current_test, 'out.data'), sep=' ', header=False, index=False)
         QMessageBox.about(self, "Конвертация", "Конвертация завершена")
 
     def get_graph(self):
