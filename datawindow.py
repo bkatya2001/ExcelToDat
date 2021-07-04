@@ -37,11 +37,11 @@ class DataWindow(QMainWindow):
         global file_path
 
         # Находим файл с таблицей
-        xlsx = os.listdir(fw.fpath)
+        xlsx = os.listdir(fw.current_project)
         for i in xlsx:
             if ".xlsx" not in i:
                 xlsx.remove(i)
-        file_path = fw.fpath + "\\" + xlsx[0]
+        file_path = fw.current_project + "\\" + xlsx[0]
 
         # Настройка окна
         self.setMinimumSize(QSize(480, 80))
@@ -122,7 +122,7 @@ class DataWindow(QMainWindow):
         global data
         global file_path
 
-        data.to_csv(fw.fpath + '\\out.data', sep=' ', header=False, index=False)
+        data.to_csv(fw.current_project + '\\out.data', sep=' ', header=False, index=False)
         QMessageBox.about(self, "Конвертация", "Конвертация завершена")
 
     def get_graph(self):

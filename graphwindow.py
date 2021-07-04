@@ -97,7 +97,7 @@ class GraphWindow(QMainWindow):
                                         'Введите название файла:')
         if ok:
             # save to file
-            exporter.export(filew.fpath + '\\' + text + '.png')
+            exporter.export(filew.current_project + '\\' + text + '.png')
 
     # Метод для отрисовки графиков в первый раз
     def draw_graph(self):

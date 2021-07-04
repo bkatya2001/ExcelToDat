@@ -53,11 +53,12 @@ class AddWindow(QMainWindow):
             self.create_btn.setEnabled(False)
 
     def create_test(self):  # Создание испытания
+        tests = os.listdir(fw.current_project)
         pat = "[A-Za-zА-Яа-я]\\d*"  # Шаблон для названия
         text = self.name_edit.text()
         if re.match(pat, text):
-            if not (text in fw.files):
-                path = fw.path + '\\' + text
+            if not (text in tests):
+                path = os.path.join(fw.current_project, text)
                 os.mkdir(path)
                 shutil.copy(self.file_lbl.text(), path)  # Копируем файл с таблицей
 
@@ -68,8 +69,6 @@ class AddWindow(QMainWindow):
                 meta_file.write("Ф.И.О. сотрудника: " + self.person_edit.text() + '\n')
                 meta_file.write("Дополнительная информация: " + self.data_edit.toPlainText())
                 meta_file.close()
-
-                fw.files.append(text)
                 self.close()
                 self.fw = fw.FileWindow()
                 self.fw.show()
