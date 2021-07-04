@@ -20,29 +20,38 @@ class AddWindow(QMainWindow):
         self.central_widget = QWidget(self)  # Создаём центральный виджет
         self.setCentralWidget(self.central_widget)
 
-        self.vertical_layout = QVBoxLayout()
-        self.form_layout = QFormLayout()
+        vertical_layout = QVBoxLayout()
+        form_layout = QFormLayout()
         self.name_edit = QLineEdit()
-        self.form_layout.addRow(QLabel("Название:"), self.name_edit)
+        form_layout.addRow(QLabel("Название:"), self.name_edit)
         self.person_edit = QLineEdit()
-        self.form_layout.addRow(QLabel("Ф.И.О. сотрудника:"), self.person_edit)
+        form_layout.addRow(QLabel("Ф.И.О. сотрудника:"), self.person_edit)
         self.data_edit = QTextEdit()
-        self.form_layout.addRow(QLabel("Дополнительная информация:"), self.data_edit)
-        self.vertical_layout.addLayout(self.form_layout)
+        form_layout.addRow(QLabel("Дополнительная информация:"), self.data_edit)
+        vertical_layout.addLayout(form_layout)
 
         choose_btn = QPushButton("Выбрать .xlsx файл")
         choose_btn.clicked.connect(self.choose_file)
-        self.vertical_layout.addWidget(choose_btn)
+        vertical_layout.addWidget(choose_btn)
 
         self.file_lbl = QLabel("")
-        self.vertical_layout.addWidget(self.file_lbl)
+        vertical_layout.addWidget(self.file_lbl)
 
         self.create_btn = QPushButton("Создать испытание")
         self.create_btn.clicked.connect(self.create_test)
         self.create_btn.setEnabled(False)
-        self.vertical_layout.addWidget(self.create_btn)
+        vertical_layout.addWidget(self.create_btn)
 
-        self.central_widget.setLayout(self.vertical_layout)
+        return_btn = QPushButton("Назад")
+        return_btn.clicked.connect(self.return_back)
+        vertical_layout.addWidget(return_btn)
+
+        self.central_widget.setLayout(vertical_layout)
+
+    def return_back(self):
+        self.fw = fw.FileWindow()
+        self.fw.show()
+        self.close()
 
     def choose_file(self):  # Выбор файла с таблицей
         file = QFileDialog.getOpenFileName(self, 'Выбрать .xlsx файл', 'C:/', "Excel Workbook (*.xlsx)")[0]
@@ -53,27 +62,27 @@ class AddWindow(QMainWindow):
             self.create_btn.setEnabled(False)
 
     def create_test(self):  # Создание испытания
-        pat = "[A-Za-zА-Яа-я]\\d*"  # Шаблон для названия
+        tests = os.listdir(os.path.join(fw.path, fw.current_project))
+        pat = "[\w-]+"  # Шаблон для названия
         text = self.name_edit.text()
-        if re.match(pat, text):
-            if not (text in fw.files):
-                path = fw.path + '\\' + text
+        if re.sub(pat, "", text, 1) == "":
+            if not (text in tests):
+                path = os.path.join(fw.path, fw.current_project, text)
                 os.mkdir(path)
                 shutil.copy(self.file_lbl.text(), path)  # Копируем файл с таблицей
 
                 # Формируем файл с дополнительной информацией
-                meta_file = open(path + "\\metadata.txt", "w")
+                meta_file = open(os.path.join(path, "metadata.txt"), "w")
                 meta_file.write(str(datetime.datetime.now()) + '\n')
-                meta_file.write("Название испытания: " + text + "\n")
+                meta_file.write("Название испытания: " + text + '\n')
                 meta_file.write("Ф.И.О. сотрудника: " + self.person_edit.text() + '\n')
                 meta_file.write("Дополнительная информация: " + self.data_edit.toPlainText())
                 meta_file.close()
-
-                fw.files.append(text)
-                self.close()
                 self.fw = fw.FileWindow()
                 self.fw.show()
+                self.close()
             else:
                 QMessageBox.about(self, "Ошибка", "Испытание с таким названием уже существует")
         else:
-            QMessageBox.about(self, "Ошибка", "Название должно состоять из букв и может содержать цифры")
+            QMessageBox.about(self, 'Ошибка', 'Название проекта может состоять из букв, цифр, а также знаков '
+                                              'тире и нижнего подчёркивания.')
