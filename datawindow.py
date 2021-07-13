@@ -3,7 +3,7 @@ import os
 from PyQt5 import QtGui
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QPushButton, \
-    QTableWidgetItem, QMessageBox
+    QTableWidgetItem, QMessageBox, QInputDialog
 import pandas as pd
 import graphwindow as gw
 import filewindow as fw
@@ -65,6 +65,8 @@ class DataWindow(QMainWindow):
         self.convert_btn.clicked.connect(self.convert_data)
         self.graph_btn = QPushButton("Построить график", self)
         self.graph_btn.clicked.connect(self.get_graph)
+        change_data_btn = QPushButton("Изменить данные")
+        change_data_btn.clicked.connect(self.change_data_in_chosen_cells)
         return_btn = QPushButton("Назад", self)
         return_btn.clicked.connect(self.return_page)
         self.convert_btn.setEnabled(False)
@@ -75,6 +77,7 @@ class DataWindow(QMainWindow):
         horizontal_layout.addWidget(self.convert_btn)
         horizontal_layout.addWidget(self.graph_btn)
         vertical_layout.addLayout(horizontal_layout)
+        vertical_layout.addWidget(change_data_btn)
         vertical_layout.addWidget(return_btn)
 
         self.create_table()
@@ -159,9 +162,9 @@ class DataWindow(QMainWindow):
 
         self.get_checked_columns()
 
-        self.graph_win = gw.GraphWindow()
+        self.graph_win = gw.GraphWindow(self)
         self.graph_win.show()
-        self.close()
+        self.hide()
 
     def change_cell(self, row, column):
         global type_flag
@@ -182,6 +185,34 @@ class DataWindow(QMainWindow):
             if len(incorrect_columns) == 0:
                 self.convert_btn.setEnabled(True)
                 self.graph_btn.setEnabled(True)
+
+    def change_data_in_chosen_cells(self):
+        cells = self.table.selectedIndexes()
+        if len(cells) == 0:
+            QMessageBox.about(self, "Ошибка", "Ни одна ячейка не была выбрана")
+        else:
+            text, ok = QInputDialog.getText(self, 'Изменение данных',
+                                            'Введите число:')
+            if ok:
+                try:
+                    value = float(text)
+                    for cell in cells:
+                        row = cell.row()
+                        column = cell.column()
+                        data.iloc[row, column] = value
+                        item = QTableWidgetItem()
+                        item.setText(text)
+                        self.table.setItem(row, column, item)
+                except:
+                    QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
+                    self.convert_btn.setEnabled(False)
+                    self.graph_btn.setEnabled(False)
+
+                incorrect_columns = check_data()
+                self.paint_headers(incorrect_columns)
+                if len(incorrect_columns) == 0:
+                    self.convert_btn.setEnabled(True)
+                    self.graph_btn.setEnabled(True)
 
     def return_page(self):
         self.fw = fw.FileWindow()
