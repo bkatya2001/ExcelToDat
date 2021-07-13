@@ -121,13 +121,23 @@ class DataWindow(QMainWindow):
     def convert_data(self):
         global data
         global file_path
+        global y
 
-        data.to_csv(os.path.join(fw.path, fw.current_project, fw.current_test, 'out.data'), sep=' ', header=False, index=False)
+        self.get_checked_columns()
+        data.to_csv(os.path.join(fw.path, fw.current_project, fw.current_test, 'out.data'),
+                    sep=' ', header=False, index=False, columns=y)
         QMessageBox.about(self, "Конвертация", "Конвертация завершена")
+
+    def get_checked_columns(self):
+        global y
+
+        y.clear()
+        for i in range(1, self.table.columnCount()):
+            if self.table.item(len(data), i).checkState() == Qt.Checked:
+                y.append(data.columns[i])  # Add labels of columns
 
     def get_graph(self):
         global data
-        global y
         global x
         global x_name
 
@@ -135,10 +145,7 @@ class DataWindow(QMainWindow):
         data = data.sort_values(by=x_name)  # Сортируем данные по возрастанию x
         x = list(data[data.columns[0]])
 
-        y.clear()
-        for i in range(1, self.table.columnCount()):
-            if self.table.item(len(data), i).checkState() == Qt.Checked:
-                y.append(data.columns[i])  # Add labels of columns
+        self.get_checked_columns()
 
         self.graph_win = gw.GraphWindow()
         self.graph_win.show()
