@@ -8,8 +8,8 @@ import addwindow as aw
 import datawindow as dw
 
 # Путь к папке с проектами и директории оттуда
-path = os.path.join(os.getcwd(), "Projects")
-projects = os.listdir(path)
+path = ""
+projects = []
 current_project = ""  # Имя проекта
 current_test = ""  # Имя испытания
 
