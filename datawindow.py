@@ -117,7 +117,7 @@ class DataWindow(QMainWindow):
             incorrect_columns = check_data()
             self.paint_headers(incorrect_columns)
             if len(incorrect_columns) != 0:
-                QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
+                #QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
                 self.convert_btn.setEnabled(False)
                 self.graph_btn.setEnabled(False)
             else:

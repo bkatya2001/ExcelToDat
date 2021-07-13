@@ -8,8 +8,10 @@ y_filtered = {}  # Фильтрованные данные (y)
 
 
 class FilterWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, data_window):
         QMainWindow.__init__(self)
+
+        self.old_data_window = data_window
 
         # Настройка окна
         self.setMinimumSize(QSize(480, 80))
@@ -52,13 +54,13 @@ class FilterWindow(QMainWindow):
                     win_size = win_size - 1
                 y_filtered[self.table.item(i, 0).text()] = savgol_filter(dw.data[dw.y[i]], win_size, 2)
                 
-        self.graph_win = gw.GraphWindow()
+        self.graph_win = gw.GraphWindow(self.old_data_window)
         self.graph_win.show()
         self.graph_win.update_graph()
         self.close()
 
     def return_back(self):
-        self.graph_win = gw.GraphWindow()
+        self.graph_win = gw.GraphWindow(self.old_data_window)
         self.graph_win.show()
         self.graph_win.update_graph()
         self.close()

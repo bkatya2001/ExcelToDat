@@ -192,7 +192,7 @@ class GraphWindow(QMainWindow):
                 QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
 
     def filter_data(self):
-        self.filter_win = fw.FilterWindow()
+        self.filter_win = fw.FilterWindow(self.old_data_window)
         self.filter_win.show()
         self.close()
 
