@@ -30,9 +30,10 @@ def plot(x, y, plotname, graphWidget):
 
 
 class GraphWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, data_window):
         QMainWindow.__init__(self)
 
+        self.old_data_window = data_window
         # Создаём поле для графика
         self.originalGraphWidget = pg.PlotWidget()
         self.originalGraphWidget.setBackground('w')
@@ -103,8 +104,7 @@ class GraphWindow(QMainWindow):
         self.close()
 
     def return_data(self):
-        self.data_win = dw.DataWindow()
-        self.data_win.show()
+        self.old_data_window.show()
         self.close()
 
     # Метод для сохранения картинок графиков
@@ -192,7 +192,7 @@ class GraphWindow(QMainWindow):
                 QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
 
     def filter_data(self):
-        self.filter_win = fw.FilterWindow()
+        self.filter_win = fw.FilterWindow(self.old_data_window)
         self.filter_win.show()
         self.close()
 

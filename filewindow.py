@@ -8,8 +8,8 @@ import addwindow as aw
 import datawindow as dw
 
 # Путь к папке с проектами и директории оттуда
-path = os.path.join(os.getcwd(), "Projects")
-projects = os.listdir(path)
+path = ""
+projects = []
 current_project = ""  # Имя проекта
 current_test = ""  # Имя испытания
 
@@ -65,7 +65,6 @@ class FileWindow(QMainWindow):
                 inner_layout.addWidget(button)
             box.setLayout(inner_layout)
             scroll = QScrollArea()
-            scroll.setMinimumSize()
             scroll.setWidget(box)
             scroll.setWidgetResizable(True)
             self.project_layout.addWidget(scroll)

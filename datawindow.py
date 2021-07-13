@@ -1,11 +1,13 @@
 import os
 
+from PyQt5 import QtGui
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QPushButton, \
-    QTableWidgetItem, QMessageBox
+    QTableWidgetItem, QMessageBox, QInputDialog
 import pandas as pd
 import graphwindow as gw
 import filewindow as fw
+import columnswindow as cw
 
 data = pd.DataFrame()  # Data from excel
 x = []  # Data for x
@@ -19,15 +21,17 @@ file_path = ""  # Отвечает за путь к .xlsx файлу
 def check_data():  # Проверка корректности введённых данных в таблицу
     global type_flag
 
-    for col in data.columns:
+    result = []
+    for col in range(len(data.columns)):
         for i in range(len(data)):
             try:
-                data[col][i] = float(data[col][i])
+                data.iloc[i, col] = float(data.iloc[i, col])
             except (TypeError, ValueError):
+                result.append(col)
                 type_flag = False
-                return False
+                break
     type_flag = True
-    return True
+    return result
 
 
 class DataWindow(QMainWindow):
@@ -35,6 +39,7 @@ class DataWindow(QMainWindow):
         QMainWindow.__init__(self)
 
         global file_path
+        global data
 
         # Находим файл с таблицей
         xlsx = os.listdir(os.path.join(fw.path, fw.current_project, fw.current_test))
@@ -62,6 +67,10 @@ class DataWindow(QMainWindow):
         self.convert_btn.clicked.connect(self.convert_data)
         self.graph_btn = QPushButton("Построить график", self)
         self.graph_btn.clicked.connect(self.get_graph)
+        change_data_btn = QPushButton("Изменить данные")
+        change_data_btn.clicked.connect(self.change_data_in_chosen_cells)
+        num_col_btn = QPushButton("Изменить порядок столбцов")
+        num_col_btn.clicked.connect(self.enumerate_col)
         return_btn = QPushButton("Назад", self)
         return_btn.clicked.connect(self.return_page)
         self.convert_btn.setEnabled(False)
@@ -72,9 +81,18 @@ class DataWindow(QMainWindow):
         horizontal_layout.addWidget(self.convert_btn)
         horizontal_layout.addWidget(self.graph_btn)
         vertical_layout.addLayout(horizontal_layout)
+        vertical_layout.addWidget(change_data_btn)
+        vertical_layout.addWidget(num_col_btn)
         vertical_layout.addWidget(return_btn)
 
-        self.create_table()
+        if file_path != "":
+            data = pd.read_excel(file_path)
+            self.create_table()
+
+    def enumerate_col(self):
+        self.cw = cw.ColumnsWindow(self)
+        self.cw.show()
+        self.hide()
 
     def create_table(self):
         global data
@@ -87,9 +105,9 @@ class DataWindow(QMainWindow):
         if file_path != "":
             type_flag = False
             table_ready = False
-            data = pd.read_excel(file_path)
             headers = data.columns.to_list()
 
+            self.clear_table()
             self.table.setColumnCount(len(headers))
             self.table.setRowCount(len(data))
             self.table.setHorizontalHeaderLabels(headers)
@@ -108,8 +126,10 @@ class DataWindow(QMainWindow):
             # делаем ресайз колонок по содержимому
             self.table.resizeColumnsToContents()
 
-            if not check_data():
-                QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
+            incorrect_columns = check_data()
+            self.paint_headers(incorrect_columns)
+            if len(incorrect_columns) != 0:
+                #QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
                 self.convert_btn.setEnabled(False)
                 self.graph_btn.setEnabled(False)
             else:
@@ -118,16 +138,37 @@ class DataWindow(QMainWindow):
 
             table_ready = True
 
+    def clear_table(self):
+        while self.table.rowCount() > 0:
+            self.table.removeRow(0)
+
+    def paint_headers(self, columns):
+        for i in range(len(data.columns)):
+            self.table.horizontalHeaderItem(i).setForeground(QtGui.QColor(0, 0, 0))
+        if len(columns) != 0:
+            for i in columns:
+                self.table.horizontalHeaderItem(i).setForeground(QtGui.QColor(247, 59, 59))
+
     def convert_data(self):
         global data
         global file_path
+        global y
 
-        data.to_csv(os.path.join(fw.path, fw.current_project, fw.current_test, 'out.data'), sep=' ', header=False, index=False)
+        self.get_checked_columns()
+        data.to_csv(os.path.join(fw.path, fw.current_project, fw.current_test, 'out.data'),
+                    sep=' ', header=False, index=False, columns=y)
         QMessageBox.about(self, "Конвертация", "Конвертация завершена")
+
+    def get_checked_columns(self):
+        global y
+
+        y.clear()
+        for i in range(1, self.table.columnCount()):
+            if self.table.item(len(data), i).checkState() == Qt.Checked:
+                y.append(data.columns[i])  # Add labels of columns
 
     def get_graph(self):
         global data
-        global y
         global x
         global x_name
 
@@ -135,14 +176,11 @@ class DataWindow(QMainWindow):
         data = data.sort_values(by=x_name)  # Сортируем данные по возрастанию x
         x = list(data[data.columns[0]])
 
-        y.clear()
-        for i in range(1, self.table.columnCount()):
-            if self.table.item(len(data), i).checkState() == Qt.Checked:
-                y.append(data.columns[i])  # Add labels of columns
+        self.get_checked_columns()
 
-        self.graph_win = gw.GraphWindow()
+        self.graph_win = gw.GraphWindow(self)
         self.graph_win.show()
-        self.close()
+        self.hide()
 
     def change_cell(self, row, column):
         global type_flag
@@ -158,9 +196,39 @@ class DataWindow(QMainWindow):
                 self.convert_btn.setEnabled(False)
                 self.graph_btn.setEnabled(False)
 
-            if check_data():
+            incorrect_columns = check_data()
+            self.paint_headers(incorrect_columns)
+            if len(incorrect_columns) == 0:
                 self.convert_btn.setEnabled(True)
                 self.graph_btn.setEnabled(True)
+
+    def change_data_in_chosen_cells(self):
+        cells = self.table.selectedIndexes()
+        if len(cells) == 0:
+            QMessageBox.about(self, "Ошибка", "Ни одна ячейка не была выбрана")
+        else:
+            text, ok = QInputDialog.getText(self, 'Изменение данных',
+                                            'Введите число:')
+            if ok:
+                try:
+                    value = float(text)
+                    for cell in cells:
+                        row = cell.row()
+                        column = cell.column()
+                        data.iloc[row, column] = value
+                        item = QTableWidgetItem()
+                        item.setText(text)
+                        self.table.setItem(row, column, item)
+                except:
+                    QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
+                    self.convert_btn.setEnabled(False)
+                    self.graph_btn.setEnabled(False)
+
+                incorrect_columns = check_data()
+                self.paint_headers(incorrect_columns)
+                if len(incorrect_columns) == 0:
+                    self.convert_btn.setEnabled(True)
+                    self.graph_btn.setEnabled(True)
 
     def return_page(self):
         self.fw = fw.FileWindow()
