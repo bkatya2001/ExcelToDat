@@ -1,5 +1,6 @@
 import os
 
+from PyQt5 import QtGui
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QPushButton, \
     QTableWidgetItem, QMessageBox
@@ -19,15 +20,17 @@ file_path = ""  # Отвечает за путь к .xlsx файлу
 def check_data():  # Проверка корректности введённых данных в таблицу
     global type_flag
 
-    for col in data.columns:
+    result = []
+    for col in range(len(data.columns)):
         for i in range(len(data)):
             try:
-                data[col][i] = float(data[col][i])
+                data.iloc[i, col] = float(data.iloc[i, col])
             except (TypeError, ValueError):
+                result.append(col)
                 type_flag = False
-                return False
+                break
     type_flag = True
-    return True
+    return result
 
 
 class DataWindow(QMainWindow):
@@ -108,7 +111,9 @@ class DataWindow(QMainWindow):
             # делаем ресайз колонок по содержимому
             self.table.resizeColumnsToContents()
 
-            if not check_data():
+            incorrect_columns = check_data()
+            self.paint_headers(incorrect_columns)
+            if len(incorrect_columns) != 0:
                 QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
                 self.convert_btn.setEnabled(False)
                 self.graph_btn.setEnabled(False)
@@ -117,6 +122,13 @@ class DataWindow(QMainWindow):
                 self.graph_btn.setEnabled(True)
 
             table_ready = True
+
+    def paint_headers(self, columns):
+        for i in range(len(data.columns)):
+            self.table.horizontalHeaderItem(i).setForeground(QtGui.QColor(0, 0, 0))
+        if len(columns) != 0:
+            for i in columns:
+                self.table.horizontalHeaderItem(i).setForeground(QtGui.QColor(247, 59, 59))
 
     def convert_data(self):
         global data
@@ -165,7 +177,9 @@ class DataWindow(QMainWindow):
                 self.convert_btn.setEnabled(False)
                 self.graph_btn.setEnabled(False)
 
-            if check_data():
+            incorrect_columns = check_data()
+            self.paint_headers(incorrect_columns)
+            if len(incorrect_columns) == 0:
                 self.convert_btn.setEnabled(True)
                 self.graph_btn.setEnabled(True)
 
