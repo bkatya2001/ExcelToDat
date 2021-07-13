@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTab
 import pandas as pd
 import graphwindow as gw
 import filewindow as fw
+import columnswindow as cw
 
 data = pd.DataFrame()  # Data from excel
 x = []  # Data for x
@@ -38,6 +39,7 @@ class DataWindow(QMainWindow):
         QMainWindow.__init__(self)
 
         global file_path
+        global data
 
         # Находим файл с таблицей
         xlsx = os.listdir(os.path.join(fw.path, fw.current_project, fw.current_test))
@@ -67,6 +69,8 @@ class DataWindow(QMainWindow):
         self.graph_btn.clicked.connect(self.get_graph)
         change_data_btn = QPushButton("Изменить данные")
         change_data_btn.clicked.connect(self.change_data_in_chosen_cells)
+        num_col_btn = QPushButton("Изменить порядок столбцов")
+        num_col_btn.clicked.connect(self.enumerate_col)
         return_btn = QPushButton("Назад", self)
         return_btn.clicked.connect(self.return_page)
         self.convert_btn.setEnabled(False)
@@ -78,9 +82,17 @@ class DataWindow(QMainWindow):
         horizontal_layout.addWidget(self.graph_btn)
         vertical_layout.addLayout(horizontal_layout)
         vertical_layout.addWidget(change_data_btn)
+        vertical_layout.addWidget(num_col_btn)
         vertical_layout.addWidget(return_btn)
 
-        self.create_table()
+        if file_path != "":
+            data = pd.read_excel(file_path)
+            self.create_table()
+
+    def enumerate_col(self):
+        self.cw = cw.ColumnsWindow(self)
+        self.cw.show()
+        self.hide()
 
     def create_table(self):
         global data
@@ -93,9 +105,9 @@ class DataWindow(QMainWindow):
         if file_path != "":
             type_flag = False
             table_ready = False
-            data = pd.read_excel(file_path)
             headers = data.columns.to_list()
 
+            self.clear_table()
             self.table.setColumnCount(len(headers))
             self.table.setRowCount(len(data))
             self.table.setHorizontalHeaderLabels(headers)
@@ -125,6 +137,10 @@ class DataWindow(QMainWindow):
                 self.graph_btn.setEnabled(True)
 
             table_ready = True
+
+    def clear_table(self):
+        while self.table.rowCount() > 0:
+            self.table.removeRow(0)
 
     def paint_headers(self, columns):
         for i in range(len(data.columns)):
