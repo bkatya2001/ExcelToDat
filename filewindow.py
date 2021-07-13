@@ -65,6 +65,7 @@ class FileWindow(QMainWindow):
                 inner_layout.addWidget(button)
             box.setLayout(inner_layout)
             scroll = QScrollArea()
+            scroll.setMinimumSize()
             scroll.setWidget(box)
             scroll.setWidgetResizable(True)
             self.project_layout.addWidget(scroll)
