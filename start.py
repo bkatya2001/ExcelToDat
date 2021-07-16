@@ -1,18 +1,19 @@
 from PyQt5.QtWidgets import QApplication
 import sys
 import os
-import filewindow as fw
+import mainwindow as mw
+from qt_material import apply_stylesheet
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    apply_stylesheet(app, theme='dark_lightgreen.xml')
 
     try:
         os.mkdir(os.path.join(os.getcwd(), "Projects"))
     except OSError:
-        pass
+        print('')
 
-    fw.path = os.path.join(os.getcwd(), "Projects")
-    fw.projects = os.listdir(fw.path)
-    fw = fw.FileWindow()
-    fw.show()
+    mw = mw.MainWindow()
+    mw.showMaximized()
     sys.exit(app.exec())
