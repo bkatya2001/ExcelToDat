@@ -6,13 +6,14 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QLabel, QFormLayout, \
     QLineEdit, QTextEdit, QFileDialog, QMessageBox
 from PyQt5.QtWidgets import QVBoxLayout, QPushButton
 from PyQt5.QtCore import QSize
-import filewindow as fw
 
 
 # Окно для создания нового испытания
 class AddWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, main_window):
         QMainWindow.__init__(self)
+
+        self.main_window = main_window
 
         # Настройка окна
         self.setMinimumSize(QSize(480, 80))
@@ -42,16 +43,7 @@ class AddWindow(QMainWindow):
         self.create_btn.setEnabled(False)
         vertical_layout.addWidget(self.create_btn)
 
-        return_btn = QPushButton("Назад")
-        return_btn.clicked.connect(self.return_back)
-        vertical_layout.addWidget(return_btn)
-
         self.central_widget.setLayout(vertical_layout)
-
-    def return_back(self):
-        self.fw = fw.FileWindow()
-        self.fw.show()
-        self.close()
 
     def choose_file(self):  # Выбор файла с таблицей
         file = QFileDialog.getOpenFileName(self, 'Выбрать .xlsx файл', 'C:/', "Excel Workbook (*.xlsx)")[0]
@@ -62,12 +54,12 @@ class AddWindow(QMainWindow):
             self.create_btn.setEnabled(False)
 
     def create_test(self):  # Создание испытания
-        tests = os.listdir(os.path.join(fw.path, fw.current_project))
+        tests = os.listdir(os.path.join(self.main_window.path, self.main_window.current_project))
         pat = "[\w-]+"  # Шаблон для названия
         text = self.name_edit.text()
         if re.sub(pat, "", text, 1) == "":
             if not (text in tests):
-                path = os.path.join(fw.path, fw.current_project, text)
+                path = os.path.join(self.main_window.path, self.main_window.current_project, text)
                 os.mkdir(path)
                 shutil.copy(self.file_lbl.text(), path)  # Копируем файл с таблицей
 
@@ -78,8 +70,7 @@ class AddWindow(QMainWindow):
                 meta_file.write("Ф.И.О. сотрудника: " + self.person_edit.text() + '\n')
                 meta_file.write("Дополнительная информация: " + self.data_edit.toPlainText())
                 meta_file.close()
-                self.fw = fw.FileWindow()
-                self.fw.show()
+                self.main_window.update_tests_layout()
                 self.close()
             else:
                 QMessageBox.about(self, "Ошибка", "Испытание с таким названием уже существует")
