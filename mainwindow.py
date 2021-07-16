@@ -201,19 +201,17 @@ class MainWindow(QMainWindow):
     def update_project_layout(self):
         clear_layout(self.project_layout)
 
-        project_lbl = QLabel("Проекты:")
-        project_lbl.setStyleSheet('font-size: 11pt')
-        self.project_layout.addWidget(project_lbl)
-
         if len(self.projects) == 0:
-            self.project_layout.addStretch(1)
             empty_lbl = QLabel("Нет созданных проектов")
             empty_lbl.setStyleSheet('font-size: 11pt')
             self.project_layout.addWidget(empty_lbl)
-            self.project_layout.addStretch(1)
         else:
             box = QGroupBox()
             inner_layout = QVBoxLayout()
+
+            project_lbl = QLabel("Проекты:")
+            project_lbl.setStyleSheet('font-size: 11pt')
+            self.project_layout.addWidget(project_lbl)
 
             self.buttons = QButtonGroup()
             self.buttons.buttonClicked[int].connect(self.choose_project)
