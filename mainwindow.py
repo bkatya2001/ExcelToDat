@@ -1,14 +1,13 @@
 import os
 import random
 import re
+import shutil
 import subprocess
 
 import pandas as pd
 import pyqtgraph as pg
 import pyqtgraph.exporters
-from PyQt5 import QtGui
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
 
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QPushButton, QVBoxLayout, QScrollArea, QGroupBox, QLabel, \
     QSizePolicy, QInputDialog, QMessageBox, QTableWidget, QTableWidgetItem, QTextEdit, QAction, QApplication, \
@@ -28,7 +27,7 @@ def get_color():
 # Метод для отрисовки графика
 def plot(x, y, plotname, graphWidget):
     color = get_color()
-    pen = pg.mkPen(color=(color[0], color[1], color[2]))
+    pen = pg.mkPen(color=(color[0], color[1], color[2]), width=3)
     return graphWidget.plot(x, y, name=plotname, pen=pen)
 
 
@@ -36,10 +35,6 @@ def plot(x, y, plotname, graphWidget):
 def clear_layout(layout):
     for i in reversed(range(layout.count())):
         layout.itemAt(i).widget().setParent(None)
-
-
-def file_pushed(file_path):
-    subprocess.run(file_path, shell=True)
 
 
 class MainWindow(QMainWindow):
@@ -77,7 +72,7 @@ class MainWindow(QMainWindow):
 
         # Часть для окна с данными
         self.table = QTableWidget(self)  # Пустая таблица
-        self.table.setMaximumWidth(int(QApplication.desktop().availableGeometry().width() * 0.3))
+        self.table.setMinimumWidth(int(QApplication.desktop().availableGeometry().width() * 0.3))
         self.table.cellChanged.connect(self.change_cell)  # Возможность редактирования данных
 
         # Часть для графиков
@@ -104,15 +99,15 @@ class MainWindow(QMainWindow):
         self.changed_plt = []
 
         # Часть для вывода
-        out_text = QTextEdit()
-        out_text.setMaximumHeight(int(QApplication.desktop().availableGeometry().height() * 0.3))
-        out_text.setReadOnly(True)
+        self.out_text = QTextEdit()
+        self.out_text.setMaximumHeight(int(QApplication.desktop().availableGeometry().height() * 0.3))
+        self.out_text.setReadOnly(True)
 
         data_layout.addLayout(self.project_layout)
         data_layout.addLayout(self.tests_layout)
         data_layout.addWidget(self.table)
         left_layout.addLayout(data_layout)
-        left_layout.addWidget(out_text)
+        left_layout.addWidget(self.out_text)
         graph_layout.addWidget(self.originalGraphWidget)
         graph_layout.addWidget(self.changedGraphWidget)
         main_layout.addLayout(left_layout)
@@ -143,8 +138,12 @@ class MainWindow(QMainWindow):
         self.graph_action = QAction("Построить график", self)
         self.graph_action.setEnabled(False)
         self.graph_action.triggered.connect(self.get_graph)
-        data_menu.addAction(self.conversion_action)
+        self.copy_action = QAction("Копировать данные", self)
+        self.copy_action.setEnabled(False)
+        self.copy_action.triggered.connect(self.copy_test)
         data_menu.addAction(self.graph_action)
+        data_menu.addAction(self.conversion_action)
+        data_menu.addAction(self.copy_action)
         change_menu = data_menu.addMenu("Изменить")
         self.data_action = QAction("Данные в выбранных ячейках", self)
         self.data_action.setEnabled(False)
@@ -192,7 +191,7 @@ class MainWindow(QMainWindow):
     def open_data(self):
         # Находим файл с таблицей
         xlsx = os.listdir(os.path.join(self.path, self.current_project, self.current_test))
-        xlsx = [i for i in xlsx if '.xlsx' in i]
+        xlsx = [i for i in xlsx if ('.xlsx' in i) and i != 'out.xlsx']
         self.file_path = os.path.join(self.path, self.current_project, self.current_test, xlsx[0])
 
         if self.file_path != "":
@@ -202,19 +201,17 @@ class MainWindow(QMainWindow):
     def update_project_layout(self):
         clear_layout(self.project_layout)
 
-        project_lbl = QLabel("Проекты:")
-        project_lbl.setStyleSheet('font-size: 11pt')
-        self.project_layout.addWidget(project_lbl)
-
         if len(self.projects) == 0:
-            self.project_layout.addStretch(1)
             empty_lbl = QLabel("Нет созданных проектов")
             empty_lbl.setStyleSheet('font-size: 11pt')
             self.project_layout.addWidget(empty_lbl)
-            self.project_layout.addStretch(1)
         else:
             box = QGroupBox()
             inner_layout = QVBoxLayout()
+
+            project_lbl = QLabel("Проекты:")
+            project_lbl.setStyleSheet('font-size: 11pt')
+            self.project_layout.addWidget(project_lbl)
 
             self.buttons = QButtonGroup()
             self.buttons.buttonClicked[int].connect(self.choose_project)
@@ -271,7 +268,7 @@ class MainWindow(QMainWindow):
                         # В обработчик нажатия передаём путь, чтобы определять, что нужно открыть
                         button.clicked.connect(
                             lambda state, file_path=os.path.join(folder_path, tests[test], file):
-                            file_pushed(file_path))
+                            self.file_pushed(file_path))
                         inner_layout.addWidget(button)
 
                 box.setLayout(inner_layout)
@@ -290,6 +287,7 @@ class MainWindow(QMainWindow):
                 button.setStyleSheet(
                     'background: transparent; text-align: left; border: none; font-size: 11pt; font-weight: 100;')
         self.test_action.setEnabled(True)
+        self.copy_action.setEnabled(False)
         self.update_tests_layout()
 
     def test_pushed(self, id):
@@ -304,7 +302,22 @@ class MainWindow(QMainWindow):
         self.conversion_action.setEnabled(True)
         self.data_action.setEnabled(True)
         self.column_action.setEnabled(True)
+        self.copy_action.setEnabled(True)
         self.open_data()
+
+    def copy_test(self):
+        item, ok = QInputDialog.getItem(self, "Выбор проекта", "Проект", tuple(self.projects), 0, False)
+        if ok and item:
+            cur_path = os.path.join(self.path, self.current_project, self.current_test)
+            new_path = os.path.join(self.path, item, self.current_test + "-copy")
+            try:
+                os.mkdir(new_path)
+                paths = [i for i in os.listdir(os.path.join(self.path, self.current_project, self.current_test))
+                         if ('.xlsx' in i) or ('.data' in i)]
+                for p in paths:
+                    shutil.copy(os.path.join(cur_path, p), new_path)
+            except FileExistsError:
+                QMessageBox.about(self, "Предупреждение", "Копия уже была создана")
 
     def create_project(self):
         name, ok = QInputDialog.getText(self, 'Создание проекта',
@@ -346,12 +359,12 @@ class MainWindow(QMainWindow):
                 for j in range(len(self.data)):
                     self.table.setItem(j, i, QTableWidgetItem(str(self.data.iloc[j, i])))
 
-            self.table.insertRow(len(self.data))  # Добавляем ряд с checkbox
+            self.table.insertRow(0)  # Добавляем ряд с checkbox
             for i in range(1, len(headers)):
                 item = QTableWidgetItem()
                 item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
                 item.setCheckState(Qt.Unchecked)
-                self.table.setItem(len(self.data), i, item)
+                self.table.setItem(0, i, item)
 
             # делаем ресайз колонок по содержимому
             self.table.resizeColumnsToContents()
@@ -383,15 +396,18 @@ class MainWindow(QMainWindow):
     def convert_data(self):
         self.get_checked_columns()
         self.y.insert(0, self.x_name)
+        self.data.to_excel(os.path.join(self.path, self.current_project, self.current_test, 'out.xlsx'),
+                           columns=self.y, index=False)
         self.data.to_csv(os.path.join(self.path, self.current_project, self.current_test, 'out.data'),
                          sep=' ', columns=self.y, header=False, index=False)
         QMessageBox.about(self, "Конвертация", "Конвертация завершена")
         self.y.remove(self.x_name)
+        self.update_tests_layout()
 
     def get_checked_columns(self):
         self.y.clear()
         for i in range(1, self.table.columnCount()):
-            if self.table.item(len(self.data), i).checkState() == Qt.Checked:
+            if self.table.item(0, i).checkState() == Qt.Checked:
                 self.y.append(self.data.columns[i])  # Add labels of columns
 
     def get_graph(self):
@@ -406,11 +422,11 @@ class MainWindow(QMainWindow):
         self.draw_graph()
 
     def change_cell(self, row, column):
-        if row != len(self.data) and self.table_ready:
-            self.data.iloc[row, column] = self.table.item(row, column).text()
+        if row != 0 and self.table_ready:
+            self.data.iloc[row-1, column] = self.table.item(row, column).text()
             try:
                 value = float(self.table.item(row, column).text())
-                self.data.iloc[row, column] = value
+                self.data.iloc[row-1, column] = value
             except (TypeError, ValueError):
                 QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
                 self.conversion_action.setEnabled(False)
@@ -464,6 +480,10 @@ class MainWindow(QMainWindow):
 
     # Метод для отрисовки графиков в первый раз
     def draw_graph(self):
+        self.originalGraphWidget.clear()
+        self.changedGraphWidget.clear()
+        self.changed_plt.clear()
+        self.original_plt.clear()
         for col in self.y:
             if col != self.x_name:
                 self.changed_plt.append(plot([0], [0], col, self.changedGraphWidget))
@@ -530,3 +550,10 @@ class MainWindow(QMainWindow):
     def filter_data(self):
         self.filter_win = fw.FilterWindow(self)
         self.filter_win.show()
+
+    def file_pushed(self, file_path):
+        if '.data' in file_path:
+            f = open(file_path)
+            self.out_text.setText(f.read())
+        else:
+            subprocess.run(file_path, shell=True)
