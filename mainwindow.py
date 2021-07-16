@@ -1,6 +1,7 @@
 import os
 import random
 import re
+import shutil
 import subprocess
 
 import pandas as pd
@@ -137,8 +138,12 @@ class MainWindow(QMainWindow):
         self.graph_action = QAction("Построить график", self)
         self.graph_action.setEnabled(False)
         self.graph_action.triggered.connect(self.get_graph)
-        data_menu.addAction(self.conversion_action)
+        self.copy_action = QAction("Копировать данные", self)
+        self.copy_action.setEnabled(False)
+        self.copy_action.triggered.connect(self.copy_test)
         data_menu.addAction(self.graph_action)
+        data_menu.addAction(self.conversion_action)
+        data_menu.addAction(self.copy_action)
         change_menu = data_menu.addMenu("Изменить")
         self.data_action = QAction("Данные в выбранных ячейках", self)
         self.data_action.setEnabled(False)
@@ -186,7 +191,7 @@ class MainWindow(QMainWindow):
     def open_data(self):
         # Находим файл с таблицей
         xlsx = os.listdir(os.path.join(self.path, self.current_project, self.current_test))
-        xlsx = [i for i in xlsx if '.xlsx' in i]
+        xlsx = [i for i in xlsx if ('.xlsx' in i) and i != 'out.xlsx']
         self.file_path = os.path.join(self.path, self.current_project, self.current_test, xlsx[0])
 
         if self.file_path != "":
@@ -284,6 +289,7 @@ class MainWindow(QMainWindow):
                 button.setStyleSheet(
                     'background: transparent; text-align: left; border: none; font-size: 11pt; font-weight: 100;')
         self.test_action.setEnabled(True)
+        self.copy_action.setEnabled(False)
         self.update_tests_layout()
 
     def test_pushed(self, id):
@@ -298,7 +304,22 @@ class MainWindow(QMainWindow):
         self.conversion_action.setEnabled(True)
         self.data_action.setEnabled(True)
         self.column_action.setEnabled(True)
+        self.copy_action.setEnabled(True)
         self.open_data()
+
+    def copy_test(self):
+        item, ok = QInputDialog.getItem(self, "Выбор проекта", "Проект", tuple(self.projects), 0, False)
+        if ok and item:
+            cur_path = os.path.join(self.path, self.current_project, self.current_test)
+            new_path = os.path.join(self.path, item, self.current_test + "-copy")
+            try:
+                os.mkdir(new_path)
+                paths = [i for i in os.listdir(os.path.join(self.path, self.current_project, self.current_test))
+                         if ('.xlsx' in i) or ('.data' in i)]
+                for p in paths:
+                    shutil.copy(os.path.join(cur_path, p), new_path)
+            except FileExistsError:
+                QMessageBox.about(self, "Предупреждение", "Копия уже была создана")
 
     def create_project(self):
         name, ok = QInputDialog.getText(self, 'Создание проекта',
@@ -340,12 +361,12 @@ class MainWindow(QMainWindow):
                 for j in range(len(self.data)):
                     self.table.setItem(j, i, QTableWidgetItem(str(self.data.iloc[j, i])))
 
-            self.table.insertRow(len(self.data))  # Добавляем ряд с checkbox
+            self.table.insertRow(0)  # Добавляем ряд с checkbox
             for i in range(1, len(headers)):
                 item = QTableWidgetItem()
                 item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
                 item.setCheckState(Qt.Unchecked)
-                self.table.setItem(len(self.data), i, item)
+                self.table.setItem(0, i, item)
 
             # делаем ресайз колонок по содержимому
             self.table.resizeColumnsToContents()
@@ -377,15 +398,18 @@ class MainWindow(QMainWindow):
     def convert_data(self):
         self.get_checked_columns()
         self.y.insert(0, self.x_name)
+        self.data.to_excel(os.path.join(self.path, self.current_project, self.current_test, 'out.xlsx'),
+                           columns=self.y, index=False)
         self.data.to_csv(os.path.join(self.path, self.current_project, self.current_test, 'out.data'),
                          sep=' ', columns=self.y, header=False, index=False)
         QMessageBox.about(self, "Конвертация", "Конвертация завершена")
         self.y.remove(self.x_name)
+        self.update_tests_layout()
 
     def get_checked_columns(self):
         self.y.clear()
         for i in range(1, self.table.columnCount()):
-            if self.table.item(len(self.data), i).checkState() == Qt.Checked:
+            if self.table.item(0, i).checkState() == Qt.Checked:
                 self.y.append(self.data.columns[i])  # Add labels of columns
 
     def get_graph(self):
@@ -400,11 +424,11 @@ class MainWindow(QMainWindow):
         self.draw_graph()
 
     def change_cell(self, row, column):
-        if row != len(self.data) and self.table_ready:
-            self.data.iloc[row, column] = self.table.item(row, column).text()
+        if row != 0 and self.table_ready:
+            self.data.iloc[row-1, column] = self.table.item(row, column).text()
             try:
                 value = float(self.table.item(row, column).text())
-                self.data.iloc[row, column] = value
+                self.data.iloc[row-1, column] = value
             except (TypeError, ValueError):
                 QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
                 self.conversion_action.setEnabled(False)
