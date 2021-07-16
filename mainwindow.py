@@ -6,9 +6,7 @@ import subprocess
 import pandas as pd
 import pyqtgraph as pg
 import pyqtgraph.exporters
-from PyQt5 import QtGui
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
 
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QPushButton, QVBoxLayout, QScrollArea, QGroupBox, QLabel, \
     QSizePolicy, QInputDialog, QMessageBox, QTableWidget, QTableWidgetItem, QTextEdit, QAction, QApplication, \
@@ -28,7 +26,7 @@ def get_color():
 # Метод для отрисовки графика
 def plot(x, y, plotname, graphWidget):
     color = get_color()
-    pen = pg.mkPen(color=(color[0], color[1], color[2]))
+    pen = pg.mkPen(color=(color[0], color[1], color[2]), width=3)
     return graphWidget.plot(x, y, name=plotname, pen=pen)
 
 
@@ -36,10 +34,6 @@ def plot(x, y, plotname, graphWidget):
 def clear_layout(layout):
     for i in reversed(range(layout.count())):
         layout.itemAt(i).widget().setParent(None)
-
-
-def file_pushed(file_path):
-    subprocess.run(file_path, shell=True)
 
 
 class MainWindow(QMainWindow):
@@ -77,7 +71,7 @@ class MainWindow(QMainWindow):
 
         # Часть для окна с данными
         self.table = QTableWidget(self)  # Пустая таблица
-        self.table.setMaximumWidth(int(QApplication.desktop().availableGeometry().width() * 0.3))
+        self.table.setMinimumWidth(int(QApplication.desktop().availableGeometry().width() * 0.3))
         self.table.cellChanged.connect(self.change_cell)  # Возможность редактирования данных
 
         # Часть для графиков
@@ -104,15 +98,15 @@ class MainWindow(QMainWindow):
         self.changed_plt = []
 
         # Часть для вывода
-        out_text = QTextEdit()
-        out_text.setMaximumHeight(int(QApplication.desktop().availableGeometry().height() * 0.3))
-        out_text.setReadOnly(True)
+        self.out_text = QTextEdit()
+        self.out_text.setMaximumHeight(int(QApplication.desktop().availableGeometry().height() * 0.3))
+        self.out_text.setReadOnly(True)
 
         data_layout.addLayout(self.project_layout)
         data_layout.addLayout(self.tests_layout)
         data_layout.addWidget(self.table)
         left_layout.addLayout(data_layout)
-        left_layout.addWidget(out_text)
+        left_layout.addWidget(self.out_text)
         graph_layout.addWidget(self.originalGraphWidget)
         graph_layout.addWidget(self.changedGraphWidget)
         main_layout.addLayout(left_layout)
@@ -271,7 +265,7 @@ class MainWindow(QMainWindow):
                         # В обработчик нажатия передаём путь, чтобы определять, что нужно открыть
                         button.clicked.connect(
                             lambda state, file_path=os.path.join(folder_path, tests[test], file):
-                            file_pushed(file_path))
+                            self.file_pushed(file_path))
                         inner_layout.addWidget(button)
 
                 box.setLayout(inner_layout)
@@ -464,6 +458,10 @@ class MainWindow(QMainWindow):
 
     # Метод для отрисовки графиков в первый раз
     def draw_graph(self):
+        self.originalGraphWidget.clear()
+        self.changedGraphWidget.clear()
+        self.changed_plt.clear()
+        self.original_plt.clear()
         for col in self.y:
             if col != self.x_name:
                 self.changed_plt.append(plot([0], [0], col, self.changedGraphWidget))
@@ -530,3 +528,10 @@ class MainWindow(QMainWindow):
     def filter_data(self):
         self.filter_win = fw.FilterWindow(self)
         self.filter_win.show()
+
+    def file_pushed(self, file_path):
+        if '.data' in file_path:
+            f = open(file_path)
+            self.out_text.setText(f.read())
+        else:
+            subprocess.run(file_path, shell=True)
