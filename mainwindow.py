@@ -57,6 +57,8 @@ class MainWindow(QMainWindow):
         self.x_max = 0  # Верхняя граница дополнения
         self.changed_flag = False
         self.y_filtered = {}  # Фильтрованные данные (y)
+        self.incorrect_data = {}  # Данные с ошибками
+        self.many_cells = False  # Флаг для метода изменения значений в нескольких ячейках
 
         self.setWindowTitle("Excel to data")
         self.central_widget = QWidget(self)  # Создаём центральный виджет
@@ -175,19 +177,6 @@ class MainWindow(QMainWindow):
         save_menu.addAction(self.original_action)
         save_menu.addAction(self.changed_action)
 
-    def check_data(self):  # Проверка корректности введённых данных в таблицу
-        result = []
-        for col in range(len(self.data.columns)):
-            for i in range(len(self.data)):
-                try:
-                    self.data.iloc[i, col] = float(self.data.iloc[i, col])
-                except (TypeError, ValueError):
-                    result.append(col)
-                    self.type_flag = False
-                    break
-        self.type_flag = True
-        return result
-
     def open_data(self):
         # Находим файл с таблицей
         xlsx = os.listdir(os.path.join(self.path, self.current_project, self.current_test))
@@ -291,6 +280,7 @@ class MainWindow(QMainWindow):
         self.update_tests_layout()
 
     def test_pushed(self, id):
+        self.incorrect_data = dict.fromkeys(self.data.columns, 0)
         for button in self.test_buttons.buttons():
             if self.test_buttons.id(button) == id:
                 self.current_test = button.text()
@@ -354,10 +344,13 @@ class MainWindow(QMainWindow):
             self.table.setColumnCount(len(headers))
             self.table.setRowCount(len(self.data))
             self.table.setHorizontalHeaderLabels(headers)
+            self.incorrect_data = dict.fromkeys(headers, 0)
 
             for i in range(len(headers)):
                 for j in range(len(self.data)):
                     self.table.setItem(j, i, QTableWidgetItem(str(self.data.iloc[j, i])))
+
+            self.table_ready = True
 
             self.table.insertRow(0)  # Добавляем ряд с checkbox
             for i in range(1, len(headers)):
@@ -369,7 +362,7 @@ class MainWindow(QMainWindow):
             # делаем ресайз колонок по содержимому
             self.table.resizeColumnsToContents()
 
-            incorrect_columns = self.check_data()
+            incorrect_columns = [key for key, value in self.incorrect_data.items() if value != 0]
             self.paint_headers(incorrect_columns)
             if len(incorrect_columns) != 0:
                 self.conversion_action.setEnabled(False)
@@ -377,8 +370,6 @@ class MainWindow(QMainWindow):
             else:
                 self.conversion_action.setEnabled(True)
                 self.graph_action.setEnabled(True)
-
-            self.table_ready = True
 
     def clear_table(self):
         while self.table.rowCount() > 0:
@@ -388,9 +379,7 @@ class MainWindow(QMainWindow):
         for i in range(len(self.data.columns)):
             header = self.table.horizontalHeaderItem(i)
             header.setText(header.text().replace('*', ''))
-        if len(columns) != 0:
-            for i in columns:
-                header = self.table.horizontalHeaderItem(i)
+            if self.data.columns[i] in columns:
                 header.setText('*' + header.text())
 
     def convert_data(self):
@@ -422,21 +411,35 @@ class MainWindow(QMainWindow):
         self.draw_graph()
 
     def change_cell(self, row, column):
-        if row != 0 and self.table_ready:
-            self.data.iloc[row-1, column] = self.table.item(row, column).text()
-            try:
-                value = float(self.table.item(row, column).text())
-                self.data.iloc[row-1, column] = value
-            except (TypeError, ValueError):
-                QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
-                self.conversion_action.setEnabled(False)
-                self.graph_action.setEnabled(False)
+        if self.table_ready:
+            if row != 0:
+                t = str(type(self.data.iloc[row - 1, column]))
+                self.data.iloc[row - 1, column] = self.table.item(row, column).text()
+                try:
+                    value = float(self.table.item(row, column).text())
+                    self.data.iloc[row - 1, column] = value
+                    if not ('float' in t) and not ('int' in t):
+                        self.incorrect_data[self.data.columns[column]] -= 1
+                except (TypeError, ValueError):
+                    if not self.many_cells:
+                        QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
+                    self.conversion_action.setEnabled(False)
+                    self.graph_action.setEnabled(False)
+                    if 'float' in t or 'int' in t:
+                        self.incorrect_data[self.data.columns[column]] += 1
 
-            incorrect_columns = self.check_data()
-            self.paint_headers(incorrect_columns)
-            if len(incorrect_columns) == 0:
-                self.conversion_action.setEnabled(True)
-                self.graph_action.setEnabled(True)
+                incorrect_columns = [key for key, value in self.incorrect_data.items() if value != 0]
+                self.paint_headers(incorrect_columns)
+                if len(incorrect_columns) != 0:
+                    self.conversion_action.setEnabled(False)
+                    self.graph_action.setEnabled(False)
+                else:
+                    self.conversion_action.setEnabled(True)
+                    self.graph_action.setEnabled(True)
+        else:
+            t = str(type(self.data.iloc[row - 1, column]))
+            if not ('float' in t) and not ('int' in t):
+                self.incorrect_data[self.data.columns[column]] += 1
 
     def change_data_in_chosen_cells(self):
         cells = self.table.selectedIndexes()
@@ -448,23 +451,16 @@ class MainWindow(QMainWindow):
             if ok:
                 try:
                     value = float(text)
-                    for cell in cells:
-                        row = cell.row()
-                        column = cell.column()
-                        self.data.iloc[row, column] = value
-                        item = QTableWidgetItem()
-                        item.setText(text)
-                        self.table.setItem(row, column, item)
                 except (TypeError, ValueError):
                     QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
-                    self.conversion_action.setEnabled(False)
-                    self.graph_action.setEnabled(False)
-
-                incorrect_columns = self.check_data()
-                self.paint_headers(incorrect_columns)
-                if len(incorrect_columns) == 0:
-                    self.conversion_action.setEnabled(True)
-                    self.graph_action.setEnabled(True)
+                self.many_cells = True
+                for cell in cells:
+                    row = cell.row()
+                    column = cell.column()
+                    item = QTableWidgetItem()
+                    item.setText(text)
+                    self.table.setItem(row, column, item)
+                self.many_cells = False
 
     # Метод для сохранения картинок графиков
     def save_graph(self, graphWidget):
