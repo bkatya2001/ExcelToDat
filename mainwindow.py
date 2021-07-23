@@ -3,11 +3,14 @@ import random
 import re
 import shutil
 import subprocess
+import threading
 
 import pandas as pd
 import pyqtgraph as pg
 import pyqtgraph.exporters
+from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QMovie
 
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QPushButton, QVBoxLayout, QScrollArea, QGroupBox, QLabel, \
     QSizePolicy, QInputDialog, QMessageBox, QTableWidget, QTableWidgetItem, QTextEdit, QAction, QApplication, \
@@ -59,6 +62,7 @@ class MainWindow(QMainWindow):
         self.y_filtered = {}  # Фильтрованные данные (y)
         self.incorrect_data = {}  # Данные с ошибками
         self.many_cells = False  # Флаг для метода изменения значений в нескольких ячейках
+        self.is_loading = False  # Флаг текущей загрузки
 
         self.setWindowTitle("Excel to data")
         self.central_widget = QWidget(self)  # Создаём центральный виджет
@@ -76,6 +80,17 @@ class MainWindow(QMainWindow):
         self.table = QTableWidget(self)  # Пустая таблица
         self.table.setMinimumWidth(int(QApplication.desktop().availableGeometry().width() * 0.3))
         self.table.cellChanged.connect(self.change_cell)  # Возможность редактирования данных
+        '''
+        self.loading_lbl = QLabel()
+        self.loading_lbl.setMinimumSize(QtCore.QSize(250, 250))
+        self.loading_lbl.move(int(QApplication.desktop().availableGeometry().width() / 2 - 125),
+                              QApplication.desktop().availableGeometry().height() / 2 - 125)
+        self.loading_lbl.setWindowFlags(QtCore.Qt.FramelessWindowHint | QtCore.Qt.WindowStaysOnTopHint)
+        self.movie = QMovie("loading.gif")
+        self.loading_lbl.setMovie(self.movie)
+        self.movie.start()
+        self.loading_lbl.hide()
+        '''
 
         # Часть для графиков
         pg.setConfigOption('foreground', pg.mkColor("000000"))
@@ -178,6 +193,8 @@ class MainWindow(QMainWindow):
         save_menu.addAction(self.changed_action)
 
     def open_data(self):
+        ###self.loading_lbl.show()
+
         # Находим файл с таблицей
         xlsx = os.listdir(os.path.join(self.path, self.current_project, self.current_test))
         xlsx = [i for i in xlsx if ('.xlsx' in i) and i != 'out.xlsx']
@@ -252,7 +269,7 @@ class MainWindow(QMainWindow):
                     for file in inner_files:  # Добавляем каждый файл из внутренних директорий
                         button = QPushButton(file)
                         button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-                        button.setStyleSheet('background: transparent; text-align: center; border: none; font-size: '
+                        button.setStyleSheet('background: transparent; text-align: left; border: none; font-size: '
                                              '7pt; font-weight: 100')
                         # В обработчик нажатия передаём путь, чтобы определять, что нужно открыть
                         button.clicked.connect(
@@ -371,16 +388,25 @@ class MainWindow(QMainWindow):
                 self.conversion_action.setEnabled(True)
                 self.graph_action.setEnabled(True)
 
+        ###self.loading_lbl.hide()
+
     def clear_table(self):
         while self.table.rowCount() > 0:
             self.table.removeRow(0)
 
     def paint_headers(self, columns):
+        message = "Некорректные данные в столбцах: \n"
         for i in range(len(self.data.columns)):
             header = self.table.horizontalHeaderItem(i)
             header.setText(header.text().replace('*', ''))
             if self.data.columns[i] in columns:
+                message += header.text() + "\n"
                 header.setText('*' + header.text())
+        if message == "Некорректные данные в столбцах: \n":
+            message = "Все данные в верном формате"
+        self.out_text.clear()
+        self.out_text.setText(message)
+
 
     def convert_data(self):
         self.get_checked_columns()
@@ -453,6 +479,7 @@ class MainWindow(QMainWindow):
                     value = float(text)
                 except (TypeError, ValueError):
                     QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
+                ###self.loading_lbl.show()
                 self.many_cells = True
                 for cell in cells:
                     row = cell.row()
@@ -461,6 +488,7 @@ class MainWindow(QMainWindow):
                     item.setText(text)
                     self.table.setItem(row, column, item)
                 self.many_cells = False
+                ###self.loading_lbl.hide()
 
     # Метод для сохранения картинок графиков
     def save_graph(self, graphWidget):
@@ -548,7 +576,7 @@ class MainWindow(QMainWindow):
         self.filter_win.show()
 
     def file_pushed(self, file_path):
-        if '.data' in file_path:
+        if '.data' in file_path or '.txt' in file_path:
             f = open(file_path)
             self.out_text.setText(f.read())
         else:
