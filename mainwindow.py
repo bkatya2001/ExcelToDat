@@ -3,14 +3,11 @@ import random
 import re
 import shutil
 import subprocess
-import threading
 
 import pandas as pd
 import pyqtgraph as pg
 import pyqtgraph.exporters
-from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QMovie
 
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QPushButton, QVBoxLayout, QScrollArea, QGroupBox, QLabel, \
     QSizePolicy, QInputDialog, QMessageBox, QTableWidget, QTableWidgetItem, QTextEdit, QAction, QApplication, \
@@ -18,6 +15,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QPushButton, QVBo
 import addwindow as aw
 import columnswindow as cw
 import filterwindow as fw
+import loadingwindow as lw
 
 
 def get_color():
@@ -80,17 +78,6 @@ class MainWindow(QMainWindow):
         self.table = QTableWidget(self)  # Пустая таблица
         self.table.setMinimumWidth(int(QApplication.desktop().availableGeometry().width() * 0.3))
         self.table.cellChanged.connect(self.change_cell)  # Возможность редактирования данных
-        '''
-        self.loading_lbl = QLabel()
-        self.loading_lbl.setMinimumSize(QtCore.QSize(250, 250))
-        self.loading_lbl.move(int(QApplication.desktop().availableGeometry().width() / 2 - 125),
-                              QApplication.desktop().availableGeometry().height() / 2 - 125)
-        self.loading_lbl.setWindowFlags(QtCore.Qt.FramelessWindowHint | QtCore.Qt.WindowStaysOnTopHint)
-        self.movie = QMovie("loading.gif")
-        self.loading_lbl.setMovie(self.movie)
-        self.movie.start()
-        self.loading_lbl.hide()
-        '''
 
         # Часть для графиков
         pg.setConfigOption('foreground', pg.mkColor("000000"))
@@ -114,6 +101,9 @@ class MainWindow(QMainWindow):
 
         self.original_plt = []
         self.changed_plt = []
+
+        # Окно загрузки
+        self.loading_win = lw.LoadingWindow()
 
         # Часть для вывода
         self.out_text = QTextEdit()
@@ -170,6 +160,10 @@ class MainWindow(QMainWindow):
         self.column_action.triggered.connect(self.enumerate_col)
         change_menu.addAction(self.data_action)
         change_menu.addAction(self.column_action)
+        self.delete_action = QAction("Удалить столбцы", self)
+        self.delete_action.setEnabled(False)
+        self.delete_action.triggered.connect(self.delete_column)
+        data_menu.addAction(self.delete_action)
 
         graph_menu = menuBar.addMenu("График")
         self.filter_action = QAction("Фильтровать", self)
@@ -193,7 +187,7 @@ class MainWindow(QMainWindow):
         save_menu.addAction(self.changed_action)
 
     def open_data(self):
-        ###self.loading_lbl.show()
+        self.loading_win.show()
 
         # Находим файл с таблицей
         xlsx = os.listdir(os.path.join(self.path, self.current_project, self.current_test))
@@ -310,6 +304,7 @@ class MainWindow(QMainWindow):
         self.data_action.setEnabled(True)
         self.column_action.setEnabled(True)
         self.copy_action.setEnabled(True)
+        self.delete_action.setEnabled(True)
         self.open_data()
 
     def copy_test(self):
@@ -387,8 +382,7 @@ class MainWindow(QMainWindow):
             else:
                 self.conversion_action.setEnabled(True)
                 self.graph_action.setEnabled(True)
-
-        ###self.loading_lbl.hide()
+        self.loading_win.close()
 
     def clear_table(self):
         while self.table.rowCount() > 0:
@@ -479,7 +473,6 @@ class MainWindow(QMainWindow):
                     value = float(text)
                 except (TypeError, ValueError):
                     QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
-                ###self.loading_lbl.show()
                 self.many_cells = True
                 for cell in cells:
                     row = cell.row()
@@ -488,7 +481,6 @@ class MainWindow(QMainWindow):
                     item.setText(text)
                     self.table.setItem(row, column, item)
                 self.many_cells = False
-                ###self.loading_lbl.hide()
 
     # Метод для сохранения картинок графиков
     def save_graph(self, graphWidget):
@@ -581,3 +573,8 @@ class MainWindow(QMainWindow):
             self.out_text.setText(f.read())
         else:
             subprocess.run(file_path, shell=True)
+
+    def delete_column(self):
+        self.get_checked_columns()
+        self.data = self.data.drop(columns=self.y)
+        self.create_table()
