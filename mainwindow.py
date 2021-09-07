@@ -15,7 +15,6 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QPushButton, QVBo
 import addwindow as aw
 import columnswindow as cw
 import filterwindow as fw
-import loadingwindow as lw
 
 
 def get_color():
@@ -102,9 +101,6 @@ class MainWindow(QMainWindow):
         self.original_plt = []
         self.changed_plt = []
 
-        # Окно загрузки
-        self.loading_win = lw.LoadingWindow()
-
         # Часть для вывода
         self.out_text = QTextEdit()
         self.out_text.setMaximumHeight(int(QApplication.desktop().availableGeometry().height() * 0.3))
@@ -186,9 +182,11 @@ class MainWindow(QMainWindow):
         save_menu.addAction(self.original_action)
         save_menu.addAction(self.changed_action)
 
-    def open_data(self):
-        self.loading_win.show()
+    def loading_data(self):
+        self.out_text.clear()
+        self.out_text.setText("Подождите. Идёт загрузка данных...")
 
+    def open_data(self):
         # Находим файл с таблицей
         xlsx = os.listdir(os.path.join(self.path, self.current_project, self.current_test))
         xlsx = [i for i in xlsx if ('.xlsx' in i) and i != 'out.xlsx']
@@ -261,15 +259,27 @@ class MainWindow(QMainWindow):
                     inner_layout.addWidget(button)
                     inner_files = os.listdir(os.path.join(folder_path, tests[test]))
                     for file in inner_files:  # Добавляем каждый файл из внутренних директорий
-                        button = QPushButton(file)
+                        button = QPushButton('- ' + file)
                         button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
                         button.setStyleSheet('background: transparent; text-align: left; border: none; font-size: '
-                                             '7pt; font-weight: 100')
+                                             '9pt; font-weight: 100; margin-left: 20px')
                         # В обработчик нажатия передаём путь, чтобы определять, что нужно открыть
                         button.clicked.connect(
                             lambda state, file_path=os.path.join(folder_path, tests[test], file):
                             self.file_pushed(file_path))
                         inner_layout.addWidget(button)
+                        if os.path.isdir(os.path.join(folder_path, tests[test], file)):
+                            data_files = os.listdir(os.path.join(folder_path, tests[test], file))
+                            for df in data_files:
+                                button = QPushButton('> ' + df)
+                                button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                                button.setStyleSheet(
+                                    'background: transparent; text-align: left; border: none; font-size: '
+                                    '7pt; font-weight: 100; margin-left: 40px')
+                                button.clicked.connect(
+                                    lambda state, file_path=os.path.join(folder_path, tests[test], file, df):
+                                    self.file_pushed(file_path))
+                                inner_layout.addWidget(button)
 
                 box.setLayout(inner_layout)
                 scroll = QScrollArea()
@@ -305,6 +315,7 @@ class MainWindow(QMainWindow):
         self.column_action.setEnabled(True)
         self.copy_action.setEnabled(True)
         self.delete_action.setEnabled(True)
+        self.loading_data()
         self.open_data()
 
     def copy_test(self):
@@ -382,7 +393,6 @@ class MainWindow(QMainWindow):
             else:
                 self.conversion_action.setEnabled(True)
                 self.graph_action.setEnabled(True)
-        self.loading_win.close()
 
     def clear_table(self):
         while self.table.rowCount() > 0:
@@ -401,17 +411,29 @@ class MainWindow(QMainWindow):
         self.out_text.clear()
         self.out_text.setText(message)
 
-
     def convert_data(self):
         self.get_checked_columns()
         self.y.insert(0, self.x_name)
-        self.data.to_excel(os.path.join(self.path, self.current_project, self.current_test, 'out.xlsx'),
-                           columns=self.y, index=False)
-        self.data.to_csv(os.path.join(self.path, self.current_project, self.current_test, 'out.data'),
-                         sep=' ', columns=self.y, header=False, index=False)
-        QMessageBox.about(self, "Конвертация", "Конвертация завершена")
-        self.y.remove(self.x_name)
-        self.update_tests_layout()
+        text, ok = QInputDialog.getText(self, 'Конвертация данных',
+                                        'Введите название файла:')
+        files = os.listdir(os.path.join(self.path, self.current_project, self.current_test, "Изменённые_данные"))
+        if ok:
+            pat = "[\w-]+"  # Шаблон для названия
+            if re.sub(pat, "", text, 1) == "":
+                if not ((text + '.data') in files):
+                    self.data.to_excel(os.path.join(self.path, self.current_project, self.current_test,
+                                                    "Изменённые_данные", text + '.xlsx'), columns=self.y, index=False)
+                    self.data.to_csv(os.path.join(self.path, self.current_project, self.current_test,
+                                                  "Изменённые_данные", text + '.data'), sep=' ', columns=self.y,
+                                     header=True, index=False)
+                    QMessageBox.about(self, "Конвертация", "Конвертация завершена")
+                    self.y.remove(self.x_name)
+                    self.update_tests_layout()
+                else:
+                    QMessageBox.about(self, "Ошибка", "Файлы с такими названиями уже существуют")
+            else:
+                QMessageBox.about(self, 'Ошибка', 'Название проекта может состоять из букв, цифр, а также знаков '
+                                                  'тире и нижнего подчёркивания.')
 
     def get_checked_columns(self):
         self.y.clear()
@@ -571,7 +593,7 @@ class MainWindow(QMainWindow):
         if '.data' in file_path or '.txt' in file_path:
             f = open(file_path)
             self.out_text.setText(f.read())
-        else:
+        elif '.' in file_path:
             subprocess.run(file_path, shell=True)
 
     def delete_column(self):

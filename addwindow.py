@@ -62,6 +62,7 @@ class AddWindow(QMainWindow):
                 path = os.path.join(self.main_window.path, self.main_window.current_project, text)
                 os.mkdir(path)
                 shutil.copy(self.file_lbl.text(), path)  # Копируем файл с таблицей
+                os.mkdir(os.path.join(path, "Изменённые_данные"))
 
                 # Формируем файл с дополнительной информацией
                 meta_file = open(os.path.join(path, "metadata.txt"), "w")
