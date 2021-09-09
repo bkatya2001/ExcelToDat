@@ -527,6 +527,19 @@ class MainWindow(QMainWindow):
                 self.changed_plt.append(plot([0], [0], col, self.changedGraphWidget))
                 self.original_plt.append(plot(self.x, list(self.data[col]), col, self.originalGraphWidget))
 
+    # Метод для отрисовки данных по .data
+    def draw_data_graph(self, path):
+        self.originalGraphWidget.clear()
+        self.changedGraphWidget.clear()
+        self.changed_plt.clear()
+        self.original_plt.clear()
+        changed_data = pd.read_csv(path, ' ', index_col=False)
+        x_name = changed_data.columns[0]
+        x = list(changed_data[x_name])
+        for col in changed_data.columns:
+            if col != x_name:
+                self.changed_plt.append(plot(x, list(changed_data[col]), col, self.changedGraphWidget))
+
     # Метод для обновления данных на графиках
     def update_graph(self):
         # plot data: x, y values
@@ -590,9 +603,13 @@ class MainWindow(QMainWindow):
         self.filter_win.show()
 
     def file_pushed(self, file_path):
-        if '.data' in file_path or '.txt' in file_path:
+        if '.txt' in file_path:
             f = open(file_path)
             self.out_text.setText(f.read())
+        elif '.data' in file_path:
+            f = open(file_path)
+            self.out_text.setText(f.read())
+            self.draw_data_graph(file_path)
         elif '.' in file_path:
             subprocess.run(file_path, shell=True)
 
