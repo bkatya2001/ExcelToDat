@@ -3,14 +3,11 @@ import random
 import re
 import shutil
 import subprocess
-import threading
 
 import pandas as pd
 import pyqtgraph as pg
 import pyqtgraph.exporters
-from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QMovie
 
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QPushButton, QVBoxLayout, QScrollArea, QGroupBox, QLabel, \
     QSizePolicy, QInputDialog, QMessageBox, QTableWidget, QTableWidgetItem, QTextEdit, QAction, QApplication, \
@@ -80,17 +77,6 @@ class MainWindow(QMainWindow):
         self.table = QTableWidget(self)  # Пустая таблица
         self.table.setMinimumWidth(int(QApplication.desktop().availableGeometry().width() * 0.3))
         self.table.cellChanged.connect(self.change_cell)  # Возможность редактирования данных
-        '''
-        self.loading_lbl = QLabel()
-        self.loading_lbl.setMinimumSize(QtCore.QSize(250, 250))
-        self.loading_lbl.move(int(QApplication.desktop().availableGeometry().width() / 2 - 125),
-                              QApplication.desktop().availableGeometry().height() / 2 - 125)
-        self.loading_lbl.setWindowFlags(QtCore.Qt.FramelessWindowHint | QtCore.Qt.WindowStaysOnTopHint)
-        self.movie = QMovie("loading.gif")
-        self.loading_lbl.setMovie(self.movie)
-        self.movie.start()
-        self.loading_lbl.hide()
-        '''
 
         # Часть для графиков
         pg.setConfigOption('foreground', pg.mkColor("000000"))
@@ -170,6 +156,10 @@ class MainWindow(QMainWindow):
         self.column_action.triggered.connect(self.enumerate_col)
         change_menu.addAction(self.data_action)
         change_menu.addAction(self.column_action)
+        self.delete_action = QAction("Удалить столбцы", self)
+        self.delete_action.setEnabled(False)
+        self.delete_action.triggered.connect(self.delete_column)
+        data_menu.addAction(self.delete_action)
 
         graph_menu = menuBar.addMenu("График")
         self.filter_action = QAction("Фильтровать", self)
@@ -192,9 +182,11 @@ class MainWindow(QMainWindow):
         save_menu.addAction(self.original_action)
         save_menu.addAction(self.changed_action)
 
-    def open_data(self):
-        ###self.loading_lbl.show()
+    def loading_data(self):
+        self.out_text.clear()
+        self.out_text.setText("Подождите. Идёт загрузка данных...")
 
+    def open_data(self):
         # Находим файл с таблицей
         xlsx = os.listdir(os.path.join(self.path, self.current_project, self.current_test))
         xlsx = [i for i in xlsx if ('.xlsx' in i) and i != 'out.xlsx']
@@ -267,15 +259,27 @@ class MainWindow(QMainWindow):
                     inner_layout.addWidget(button)
                     inner_files = os.listdir(os.path.join(folder_path, tests[test]))
                     for file in inner_files:  # Добавляем каждый файл из внутренних директорий
-                        button = QPushButton(file)
+                        button = QPushButton('- ' + file)
                         button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
                         button.setStyleSheet('background: transparent; text-align: left; border: none; font-size: '
-                                             '7pt; font-weight: 100')
+                                             '9pt; font-weight: 100; margin-left: 20px')
                         # В обработчик нажатия передаём путь, чтобы определять, что нужно открыть
                         button.clicked.connect(
                             lambda state, file_path=os.path.join(folder_path, tests[test], file):
                             self.file_pushed(file_path))
                         inner_layout.addWidget(button)
+                        if os.path.isdir(os.path.join(folder_path, tests[test], file)):
+                            data_files = os.listdir(os.path.join(folder_path, tests[test], file))
+                            for df in data_files:
+                                button = QPushButton('> ' + df)
+                                button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                                button.setStyleSheet(
+                                    'background: transparent; text-align: left; border: none; font-size: '
+                                    '7pt; font-weight: 100; margin-left: 40px')
+                                button.clicked.connect(
+                                    lambda state, file_path=os.path.join(folder_path, tests[test], file, df):
+                                    self.file_pushed(file_path))
+                                inner_layout.addWidget(button)
 
                 box.setLayout(inner_layout)
                 scroll = QScrollArea()
@@ -310,6 +314,8 @@ class MainWindow(QMainWindow):
         self.data_action.setEnabled(True)
         self.column_action.setEnabled(True)
         self.copy_action.setEnabled(True)
+        self.delete_action.setEnabled(True)
+        self.loading_data()
         self.open_data()
 
     def copy_test(self):
@@ -388,8 +394,6 @@ class MainWindow(QMainWindow):
                 self.conversion_action.setEnabled(True)
                 self.graph_action.setEnabled(True)
 
-        ###self.loading_lbl.hide()
-
     def clear_table(self):
         while self.table.rowCount() > 0:
             self.table.removeRow(0)
@@ -407,17 +411,29 @@ class MainWindow(QMainWindow):
         self.out_text.clear()
         self.out_text.setText(message)
 
-
     def convert_data(self):
         self.get_checked_columns()
         self.y.insert(0, self.x_name)
-        self.data.to_excel(os.path.join(self.path, self.current_project, self.current_test, 'out.xlsx'),
-                           columns=self.y, index=False)
-        self.data.to_csv(os.path.join(self.path, self.current_project, self.current_test, 'out.data'),
-                         sep=' ', columns=self.y, header=False, index=False)
-        QMessageBox.about(self, "Конвертация", "Конвертация завершена")
-        self.y.remove(self.x_name)
-        self.update_tests_layout()
+        text, ok = QInputDialog.getText(self, 'Конвертация данных',
+                                        'Введите название файла:')
+        files = os.listdir(os.path.join(self.path, self.current_project, self.current_test, "Изменённые_данные"))
+        if ok:
+            pat = "[\w-]+"  # Шаблон для названия
+            if re.sub(pat, "", text, 1) == "":
+                if not ((text + '.data') in files):
+                    self.data.to_excel(os.path.join(self.path, self.current_project, self.current_test,
+                                                    "Изменённые_данные", text + '.xlsx'), columns=self.y, index=False)
+                    self.data.to_csv(os.path.join(self.path, self.current_project, self.current_test,
+                                                  "Изменённые_данные", text + '.data'), sep=' ', columns=self.y,
+                                     header=True, index=False)
+                    QMessageBox.about(self, "Конвертация", "Конвертация завершена")
+                    self.y.remove(self.x_name)
+                    self.update_tests_layout()
+                else:
+                    QMessageBox.about(self, "Ошибка", "Файлы с такими названиями уже существуют")
+            else:
+                QMessageBox.about(self, 'Ошибка', 'Название проекта может состоять из букв, цифр, а также знаков '
+                                                  'тире и нижнего подчёркивания.')
 
     def get_checked_columns(self):
         self.y.clear()
@@ -479,7 +495,6 @@ class MainWindow(QMainWindow):
                     value = float(text)
                 except (TypeError, ValueError):
                     QMessageBox.about(self, "Ошибка", "Введены некорректные данные")
-                ###self.loading_lbl.show()
                 self.many_cells = True
                 for cell in cells:
                     row = cell.row()
@@ -488,7 +503,6 @@ class MainWindow(QMainWindow):
                     item.setText(text)
                     self.table.setItem(row, column, item)
                 self.many_cells = False
-                ###self.loading_lbl.hide()
 
     # Метод для сохранения картинок графиков
     def save_graph(self, graphWidget):
@@ -512,6 +526,19 @@ class MainWindow(QMainWindow):
             if col != self.x_name:
                 self.changed_plt.append(plot([0], [0], col, self.changedGraphWidget))
                 self.original_plt.append(plot(self.x, list(self.data[col]), col, self.originalGraphWidget))
+
+    # Метод для отрисовки данных по .data
+    def draw_data_graph(self, path):
+        self.originalGraphWidget.clear()
+        self.changedGraphWidget.clear()
+        self.changed_plt.clear()
+        self.original_plt.clear()
+        changed_data = pd.read_csv(path, ' ', index_col=False)
+        x_name = changed_data.columns[0]
+        x = list(changed_data[x_name])
+        for col in changed_data.columns:
+            if col != x_name:
+                self.changed_plt.append(plot(x, list(changed_data[col]), col, self.changedGraphWidget))
 
     # Метод для обновления данных на графиках
     def update_graph(self):
@@ -576,8 +603,17 @@ class MainWindow(QMainWindow):
         self.filter_win.show()
 
     def file_pushed(self, file_path):
-        if '.data' in file_path or '.txt' in file_path:
+        if '.txt' in file_path:
             f = open(file_path)
             self.out_text.setText(f.read())
-        else:
+        elif '.data' in file_path:
+            f = open(file_path)
+            self.out_text.setText(f.read())
+            self.draw_data_graph(file_path)
+        elif '.' in file_path:
             subprocess.run(file_path, shell=True)
+
+    def delete_column(self):
+        self.get_checked_columns()
+        self.data = self.data.drop(columns=self.y)
+        self.create_table()
