@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QPushButton, QVBo
 import addwindow as aw
 import columnswindow as cw
 import filterwindow as fw
+import threadclass as thread
 
 
 def get_color():
@@ -106,6 +107,11 @@ class MainWindow(QMainWindow):
         self.out_text.setMaximumHeight(int(QApplication.desktop().availableGeometry().height() * 0.3))
         self.out_text.setReadOnly(True)
 
+        # Второй поток
+        self.threadclass = thread.ThreadClass(self)
+        #self.threadclass.startSignal.connect(self.start_process)
+        self.threadclass.finishSignal.connect(self.finishSignal_process)
+
         data_layout.addLayout(self.project_layout)
         data_layout.addLayout(self.tests_layout)
         data_layout.addWidget(self.table)
@@ -186,19 +192,8 @@ class MainWindow(QMainWindow):
         self.out_text.clear()
         self.out_text.setText("Подождите. Идёт загрузка данных...")
 
-    def open_data(self):
-        # Находим файл с таблицей
-        xlsx = os.listdir(os.path.join(self.path, self.current_project, self.current_test))
-        xlsx = [i for i in xlsx if ('.xlsx' in i) and i != 'out.xlsx']
-        self.file_path = os.path.join(self.path, self.current_project, self.current_test, xlsx[0])
-
-        if self.file_path != "":
-            self.data = pd.read_excel(self.file_path)
-            self.create_table()
-
     def update_project_layout(self):
         clear_layout(self.project_layout)
-
         if len(self.projects) == 0:
             empty_lbl = QLabel("Нет созданных проектов")
             empty_lbl.setStyleSheet('font-size: 11pt')
@@ -316,7 +311,10 @@ class MainWindow(QMainWindow):
         self.copy_action.setEnabled(True)
         self.delete_action.setEnabled(True)
         self.loading_data()
-        self.open_data()
+        self.threadclass.start()
+
+    def finishSignal_process(self):
+        self.create_table()
 
     def copy_test(self):
         item, ok = QInputDialog.getItem(self, "Выбор проекта", "Проект", tuple(self.projects), 0, False)
