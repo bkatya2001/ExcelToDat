@@ -1,0 +1,85 @@
+QScrollBar:horizontal {{
+  border: 0;
+  background: {{secondaryColor}};
+  height: 12px;
+}}
+
+QScrollBar:vertical {{
+  border: 0;
+  background: {{secondaryColor}};
+  width: 12px;
+}}
+
+QScrollBar::handle:horizontal {{
+  background: {{secondaryLightColor}};
+  min-width: 20px;
+}}
+
+QScrollBar::handle:vertical {{
+  background: {{secondaryLightColor}};
+  min-height: 20px;
+}}
+
+QScrollBar::handle:vertical:hover,
+QScrollBar::handle:horizontal:hover {{
+  background: {{primaryColor}};
+}}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical,
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {{
+  border: 0;
+  background: transparent;
+  width: 0px;
+  height: 0px;
+}}
+
+/*  ------------------------------------------------------------------------  */
+/*  QSlider  */
+
+QSlider:horizontal {{
+  min-height: 40px;
+  max-height: 40px;
+}}
+
+QSlider:vertical {{
+  min-width: 40px;
+  max-width: 40px;
+}}
+
+QSlider::groove:horizontal {{
+  height: 12px;
+  background: #393939;
+  margin: 0 10px;
+}}
+
+QSlider::groove:vertical {{
+  width: 12px;
+  background: #393939;
+  margin: 10px 0;
+  border-radius: 20px;
+}}
+
+QSlider::handle:horizontal {{
+  image: url(icon:/primary/slider.svg);
+  width: 40px;
+  height: 40px;
+  margin: -20px -10px;
+}}
+
+QSlider::handle:vertical {{
+  image: url(icon:/primary/slider.svg);
+  border-radius: 20px;
+  width: 40px;
+  height: 40px;
+  margin: -10px -20px;
+}}
+
+QSlider::add-page {{
+background: {{secondaryColor}};
+}}
+
+QSlider::sub-page {{
+background: {{primaryColor}};
+}}
