@@ -408,6 +408,10 @@ class MainWindow(QMainWindow):
                 header.setText('*' + header.text())
         if message == "Некорректные данные в столбцах: \n":
             message = "Все данные в верном формате"
+        else:
+            message += "\nДанные могут быть представлены только в числовом формате.\n" \
+                       "Для изменения значений выделите нужные ячейки и нажмите " \
+                       "'Данные' - 'Изменить' - 'Данные в выбранных ячейках'."
         self.out_text.clear()
         self.out_text.setText(message)
 
