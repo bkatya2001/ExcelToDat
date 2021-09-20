@@ -11,7 +11,7 @@ from PyQt5.QtCore import Qt
 
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QPushButton, QVBoxLayout, QScrollArea, QGroupBox, QLabel, \
     QSizePolicy, QInputDialog, QMessageBox, QTableWidget, QTableWidgetItem, QTextEdit, QAction, QApplication, \
-    QButtonGroup
+    QButtonGroup, QFileDialog
 import addwindow as aw
 import columnswindow as cw
 import filterwindow as fw
@@ -109,7 +109,7 @@ class MainWindow(QMainWindow):
 
         # Второй поток
         self.threadclass = thread.ThreadClass(self)
-        #self.threadclass.startSignal.connect(self.start_process)
+        # self.threadclass.startSignal.connect(self.start_process)
         self.threadclass.finishSignal.connect(self.finishSignal_process)
 
         data_layout.addLayout(self.project_layout)
@@ -139,6 +139,13 @@ class MainWindow(QMainWindow):
         self.test_action.triggered.connect(self.add_test)
         create_menu.addAction(self.project_action)
         create_menu.addAction(self.test_action)
+        delete_menu = file_menu.addMenu("Удалить")
+        self.delete_prj_action = QAction("Проект", self)
+        self.delete_prj_action.triggered.connect(self.delete_prj_folder)
+        self.delete_test_action = QAction("Данные испытаний", self)
+        self.delete_test_action.triggered.connect(self.delete_test_folder)
+        delete_menu.addAction(self.delete_prj_action)
+        delete_menu.addAction(self.delete_test_action)
 
         data_menu = menuBar.addMenu("Данные")
         self.conversion_action = QAction("Конвертировать в .data", self)
@@ -194,6 +201,7 @@ class MainWindow(QMainWindow):
 
     def update_project_layout(self):
         clear_layout(self.project_layout)
+        self.projects = os.listdir(self.path)
         if len(self.projects) == 0:
             empty_lbl = QLabel("Нет созданных проектов")
             empty_lbl.setStyleSheet('font-size: 11pt')
@@ -619,3 +627,20 @@ class MainWindow(QMainWindow):
         self.get_checked_columns()
         self.data = self.data.drop(columns=self.y)
         self.create_table()
+
+    def delete_prj_folder(self, name=""):
+        if name == "":
+            path = os.path.normpath(os.path.join(os.getcwd(), "Projects"))
+            prj = QFileDialog.getExistingDirectory(self, "Выберите проект", path, QFileDialog.ShowDirsOnly)
+            if prj != "" and (path in os.path.normpath(prj)):
+                os.rmdir(prj)
+                self.update_project_layout()
+
+    def delete_test_folder(self):
+        path = os.path.normpath(os.path.join(os.getcwd(), "Projects"))
+        prj = QFileDialog.getExistingDirectory(self, "Выберите испытание", path, QFileDialog.ShowDirsOnly)
+        if prj != "":
+            h, t = os.path.split(os.path.normpath(prj))
+            h, t = os.path.split(h)
+            if path == h:
+                os.rmdir(prj)

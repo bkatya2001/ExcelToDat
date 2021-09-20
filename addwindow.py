@@ -67,6 +67,7 @@ class AddWindow(QMainWindow):
                 # Формируем файл с дополнительной информацией
                 meta_file = open(os.path.join(path, "metadata.txt"), "w")
                 meta_file.write(str(datetime.datetime.now()) + '\n')
+                meta_file.write("Расположение файла: " + os.path.join(path, "metadata.txt") + '\n')
                 meta_file.write("Название испытания: " + text + '\n')
                 meta_file.write("Ф.И.О. сотрудника: " + self.person_edit.text() + '\n')
                 meta_file.write("Дополнительная информация: " + self.data_edit.toPlainText())
