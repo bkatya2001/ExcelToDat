@@ -1,7 +1,7 @@
+from PyQt5 import QtCore
 from PyQt5.QtCore import QSize
 from PyQt5.QtWidgets import QMainWindow, QWidget, QTableWidget, QTableWidgetItem, QPushButton, QVBoxLayout
 import pandas as pd
-import start
 
 
 class ColumnsWindow(QMainWindow):
@@ -22,7 +22,9 @@ class ColumnsWindow(QMainWindow):
         self.table.setHorizontalHeaderLabels(['Столбец', 'Порядковый номер'])
 
         for i in range(len(self.main_window.data.columns)):
-            self.table.setItem(i, 0, QTableWidgetItem(str(self.main_window.data.columns[i])))
+            item = QTableWidgetItem(str(self.main_window.data.columns[i]))
+            item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
+            self.table.setItem(i, 0, item)
             self.table.setItem(i, 1, QTableWidgetItem(''))
 
         set_btn = QPushButton("Установить порядок", self)
@@ -34,11 +36,18 @@ class ColumnsWindow(QMainWindow):
         self.central_widget.setLayout(vertical_layout)
 
     def set_data(self):
-        df = pd.DataFrame(columns=['columns', 'value'])
+        df = pd.DataFrame(columns=['column', 'value'])
         for i in range(len(self.main_window.data.columns)):
-            df.loc[len(df)] = [self.table.item(i, 0).text(), self.table.item(i, 1).text()]
+            if (self.table.item(i, 1).text()).isdigit():
+                if int(self.table.item(i, 1).text()) - 1 >= 0:
+                    df.loc[len(df)] = [self.table.item(i, 0).text(), int(self.table.item(i, 1).text()) - 1]
         df = df.sort_values(by='value')
-        self.main_window.data = self.main_window.data.reindex(columns=df['columns'])
+        columns = self.main_window.data.columns.to_list()
+        for i in df['column']:
+            columns.remove(i)
+        for i in range(len(df)):
+            columns.insert(df.loc[i, 'value'], df.loc[i, 'column'])
+        self.main_window.data = self.main_window.data.reindex(columns=columns)
 
         self.main_window.create_table()
         self.close()

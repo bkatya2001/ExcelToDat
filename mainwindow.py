@@ -86,7 +86,7 @@ class MainWindow(QMainWindow):
         self.originalGraphWidget.setBackground('w')
         self.originalGraphWidget.setTitle("Исходные данные")
         self.originalGraphWidget.setLabel('left', 'Values')
-        self.originalGraphWidget.setLabel('bottom', self.x_name)
+        self.originalGraphWidget.setLabel('bottom', 'X')
         self.originalGraphWidget.showGrid(x=True, y=True)
         self.originalGraphWidget.addLegend()  # Описание: цвет - график
 
@@ -95,7 +95,7 @@ class MainWindow(QMainWindow):
         self.changedGraphWidget.setBackground('w')
         self.changedGraphWidget.setTitle("Изменённые данные")
         self.changedGraphWidget.setLabel('left', 'Values')
-        self.changedGraphWidget.setLabel('bottom', self.x_name)
+        self.changedGraphWidget.setLabel('bottom', 'X')
         self.changedGraphWidget.showGrid(x=True, y=True)
         self.changedGraphWidget.addLegend()
 
@@ -109,7 +109,6 @@ class MainWindow(QMainWindow):
 
         # Второй поток
         self.threadclass = thread.ThreadClass(self)
-        # self.threadclass.startSignal.connect(self.start_process)
         self.threadclass.finishSignal.connect(self.finishSignal_process)
 
         data_layout.addLayout(self.project_layout)
@@ -382,7 +381,7 @@ class MainWindow(QMainWindow):
             self.table_ready = True
 
             self.table.insertRow(0)  # Добавляем ряд с checkbox
-            for i in range(1, len(headers)):
+            for i in range(0, len(headers)):
                 item = QTableWidgetItem()
                 item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
                 item.setCheckState(Qt.Unchecked)
@@ -423,7 +422,6 @@ class MainWindow(QMainWindow):
 
     def convert_data(self):
         self.get_checked_columns()
-        self.y.insert(0, self.x_name)
         text, ok = QInputDialog.getText(self, 'Конвертация данных',
                                         'Введите название файла:')
         files = os.listdir(os.path.join(self.path, self.current_project, self.current_test, "Изменённые_данные"))
@@ -437,7 +435,6 @@ class MainWindow(QMainWindow):
                                                   "Изменённые_данные", text + '.data'), sep=' ', columns=self.y,
                                      header=True, index=False)
                     QMessageBox.about(self, "Конвертация", "Конвертация завершена")
-                    self.y.remove(self.x_name)
                     self.update_tests_layout()
                 else:
                     QMessageBox.about(self, "Ошибка", "Файлы с такими названиями уже существуют")
@@ -447,12 +444,12 @@ class MainWindow(QMainWindow):
 
     def get_checked_columns(self):
         self.y.clear()
-        for i in range(1, self.table.columnCount()):
+        for i in range(0, self.table.columnCount()):
             if self.table.item(0, i).checkState() == Qt.Checked:
                 self.y.append(self.data.columns[i])  # Add labels of columns
 
     def get_graph(self):
-        self.x_name = self.data.columns[0]
+        #self.x_name = self.data.columns[0]
         self.data = self.data.sort_values(by=self.x_name)  # Сортируем данные по возрастанию x
         self.x = list(self.data[self.data.columns[0]])
 
