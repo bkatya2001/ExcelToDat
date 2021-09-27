@@ -7,11 +7,13 @@ import subprocess
 import pandas as pd
 import pyqtgraph as pg
 import pyqtgraph.exporters
+from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QCursor
 
 from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QPushButton, QVBoxLayout, QScrollArea, QGroupBox, QLabel, \
     QSizePolicy, QInputDialog, QMessageBox, QTableWidget, QTableWidgetItem, QTextEdit, QAction, QApplication, \
-    QButtonGroup, QFileDialog
+    QButtonGroup, QFileDialog, QMenu
 import addwindow as aw
 import columnswindow as cw
 import filterwindow as fw
@@ -150,6 +152,9 @@ class MainWindow(QMainWindow):
         self.conversion_action = QAction("Конвертировать в .data", self)
         self.conversion_action.setEnabled(False)
         self.conversion_action.triggered.connect(self.convert_data)
+        self.set_x_action = QAction("Назначить ось абсцисс", self)
+        self.set_x_action.setEnabled(False)
+        self.set_x_action.triggered.connect(self.set_x)
         self.graph_action = QAction("Построить график", self)
         self.graph_action.setEnabled(False)
         self.graph_action.triggered.connect(self.get_graph)
@@ -158,6 +163,7 @@ class MainWindow(QMainWindow):
         self.copy_action.triggered.connect(self.copy_test)
         data_menu.addAction(self.graph_action)
         data_menu.addAction(self.conversion_action)
+        data_menu.addAction(self.set_x_action)
         data_menu.addAction(self.copy_action)
         change_menu = data_menu.addMenu("Изменить")
         self.data_action = QAction("Данные в выбранных ячейках", self)
@@ -194,6 +200,30 @@ class MainWindow(QMainWindow):
         save_menu.addAction(self.original_action)
         save_menu.addAction(self.changed_action)
 
+    def init_prj_context_menu(self, name):
+        self.current_project = name
+        context_menu = QMenu(self)
+        add_data = QAction("Добавить данные испытаний", self)
+        add_data.triggered.connect(self.add_test)
+        delete_project = QAction("Удалить проект", self)
+        delete_project.triggered.connect(lambda state: self.delete_prj_folder(name))
+        context_menu.addAction(add_data)
+        context_menu.addAction(delete_project)
+        context_menu.exec_(QCursor.pos())
+
+    def init_header_context_menu(self, name):
+        context_menu = QMenu(self)
+        set = QAction("Сделать осью абсцисс", self)
+        #set.triggered.connect(lambda state: self.set_x(name))
+        context_menu.addAction(set)
+        context_menu.exec_(QCursor.pos())
+
+    def set_x(self):
+        items = self.data.columns.to_list()
+        item, ok = QInputDialog().getItem(self, "Назначение оси абсцисс", "Выберите:", items, 0, False)
+        if ok and item != '':
+            self.x_name = item
+
     def loading_data(self):
         self.out_text.clear()
         self.out_text.setText("Подождите. Идёт загрузка данных...")
@@ -220,6 +250,9 @@ class MainWindow(QMainWindow):
                 button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
                 button.setStyleSheet('background: transparent; text-align: left; border: none; font-size: 11pt; '
                                      'font-weight: 100')
+                button.setContextMenuPolicy(Qt.CustomContextMenu)
+                button.customContextMenuRequested.connect(lambda state, name=self.projects[folder]:
+                                                          self.init_prj_context_menu(name))
                 self.buttons.addButton(button, folder)
                 inner_layout.addWidget(button)
 
@@ -294,7 +327,8 @@ class MainWindow(QMainWindow):
             if self.buttons.id(button) == id:
                 self.current_project = button.text()
                 button.setStyleSheet(
-                    'background: transparent; text-align: left; border: none; font-size: 11pt; font-weight: 700;')
+                    'background: transparent; text-align: left; border: none; font-size: 11pt; font-weight: 700; '
+                    'color: yellow')
             else:
                 button.setStyleSheet(
                     'background: transparent; text-align: left; border: none; font-size: 11pt; font-weight: 100;')
@@ -308,7 +342,8 @@ class MainWindow(QMainWindow):
             if self.test_buttons.id(button) == id:
                 self.current_test = button.text()
                 button.setStyleSheet(
-                    'background: transparent; text-align: left; border: none; font-size: 11pt; font-weight: 700;')
+                    'background: transparent; text-align: left; border: none; font-size: 11pt; font-weight: 700; '
+                    'color: yellow')
             else:
                 button.setStyleSheet(
                     'background: transparent; text-align: left; border: none; font-size: 11pt; font-weight: 100;')
@@ -317,11 +352,20 @@ class MainWindow(QMainWindow):
         self.column_action.setEnabled(True)
         self.copy_action.setEnabled(True)
         self.delete_action.setEnabled(True)
+        self.set_x_action.setEnabled(True)
+
+        # Находим файл с таблицей
+        xlsx = os.listdir(os.path.join(self.path, self.current_project, self.current_test))
+        xlsx = [i for i in xlsx if ('.xlsx' in i) and i != 'out.xlsx']
+        self.file_path = os.path.join(self.path, self.current_project, self.current_test, xlsx[0])
+
         self.loading_data()
         self.threadclass.start()
 
     def finishSignal_process(self):
         self.create_table()
+        if '.data' in self.file_path:
+            self.draw_data_graph()
 
     def copy_test(self):
         item, ok = QInputDialog.getItem(self, "Выбор проекта", "Проект", tuple(self.projects), 0, False)
@@ -364,6 +408,7 @@ class MainWindow(QMainWindow):
     def create_table(self):
         if self.file_path != "":
             self.x_name = self.data.columns[0]
+            self.x = list(self.data[self.x_name])
             self.type_flag = False
             self.table_ready = False
             headers = self.data.columns.to_list()
@@ -408,9 +453,11 @@ class MainWindow(QMainWindow):
         for i in range(len(self.data.columns)):
             header = self.table.horizontalHeaderItem(i)
             header.setText(header.text().replace('*', ''))
+
             if self.data.columns[i] in columns:
                 message += header.text() + "\n"
                 header.setText('*' + header.text())
+
         if message == "Некорректные данные в столбцах: \n":
             message = "Все данные в верном формате"
         else:
@@ -449,9 +496,8 @@ class MainWindow(QMainWindow):
                 self.y.append(self.data.columns[i])  # Add labels of columns
 
     def get_graph(self):
-        #self.x_name = self.data.columns[0]
         self.data = self.data.sort_values(by=self.x_name)  # Сортируем данные по возрастанию x
-        self.x = list(self.data[self.data.columns[0]])
+        self.x = list(self.data[self.x_name])
 
         self.filter_action.setEnabled(True)
         self.add_action.setEnabled(True)
@@ -535,17 +581,15 @@ class MainWindow(QMainWindow):
                 self.original_plt.append(plot(self.x, list(self.data[col]), col, self.originalGraphWidget))
 
     # Метод для отрисовки данных по .data
-    def draw_data_graph(self, path):
+    def draw_data_graph(self):
         self.originalGraphWidget.clear()
         self.changedGraphWidget.clear()
         self.changed_plt.clear()
         self.original_plt.clear()
-        changed_data = pd.read_csv(path, ' ', index_col=False)
-        x_name = changed_data.columns[0]
-        x = list(changed_data[x_name])
-        for col in changed_data.columns:
-            if col != x_name:
-                self.changed_plt.append(plot(x, list(changed_data[col]), col, self.changedGraphWidget))
+        for col in self.data.columns:
+            if col != self.x_name:
+                self.original_plt.append(plot(self.x, list(self.data[col]), col, self.originalGraphWidget))
+                self.changed_plt.append(plot([0], [0], col, self.changedGraphWidget))
 
     # Метод для обновления данных на графиках
     def update_graph(self):
@@ -614,9 +658,17 @@ class MainWindow(QMainWindow):
             f = open(file_path)
             self.out_text.setText(f.read())
         elif '.data' in file_path:
+            self.file_path = file_path
+            self.conversion_action.setEnabled(True)
+            self.data_action.setEnabled(True)
+            self.column_action.setEnabled(True)
+            self.copy_action.setEnabled(True)
+            self.delete_action.setEnabled(True)
+            self.set_x_action.setEnabled(True)
             f = open(file_path)
             self.out_text.setText(f.read())
-            self.draw_data_graph(file_path)
+            self.loading_data()
+            self.threadclass.start()
         elif '.' in file_path:
             subprocess.run(file_path, shell=True)
 
@@ -626,12 +678,18 @@ class MainWindow(QMainWindow):
         self.create_table()
 
     def delete_prj_folder(self, name=""):
+        self.current_project = ""
         if name == "":
             path = os.path.normpath(os.path.join(os.getcwd(), "Projects"))
             prj = QFileDialog.getExistingDirectory(self, "Выберите проект", path, QFileDialog.ShowDirsOnly)
             if prj != "" and (path in os.path.normpath(prj)):
-                os.rmdir(prj)
+                shutil.rmtree(prj, ignore_errors=True)
                 self.update_project_layout()
+                self.update_tests_layout()
+        else:
+            shutil.rmtree(os.path.join(self.path, name), ignore_errors=True)
+            self.update_project_layout()
+            self.update_tests_layout()
 
     def delete_test_folder(self):
         path = os.path.normpath(os.path.join(os.getcwd(), "Projects"))

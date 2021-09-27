@@ -13,14 +13,10 @@ class ThreadClass(QThread):
         self.main_window = main_window
 
     def run(self):
-        # Находим файл с таблицей
-        xlsx = os.listdir(os.path.join(self.main_window.path, self.main_window.current_project,
-                                       self.main_window.current_test))
-        xlsx = [i for i in xlsx if ('.xlsx' in i) and i != 'out.xlsx']
-        self.main_window.file_path = os.path.join(self.main_window.path, self.main_window.current_project,
-                                                  self.main_window.current_test, xlsx[0])
-
-        if self.main_window.file_path != "":
-            self.main_window.data = pd.read_excel(self.main_window.file_path)
+        if '.data' in self.main_window.file_path:
+            self.main_window.data = pd.read_csv(self.main_window.file_path, ' ', index_col=False)
+        else:
+            if self.main_window.file_path != "":
+                self.main_window.data = pd.read_excel(self.main_window.file_path)
 
         self.finishSignal.emit("Готово!")
