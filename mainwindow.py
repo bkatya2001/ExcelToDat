@@ -7,7 +7,6 @@ import subprocess
 import pandas as pd
 import pyqtgraph as pg
 import pyqtgraph.exporters
-from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCursor
 
@@ -17,6 +16,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QPushButton, QVBo
 import addwindow as aw
 import columnswindow as cw
 import filterwindow as fw
+import functionswindow as funcwin
 import threadclass as thread
 
 
@@ -179,6 +179,16 @@ class MainWindow(QMainWindow):
         self.delete_action.triggered.connect(self.delete_column)
         data_menu.addAction(self.delete_action)
 
+        function_menu = menuBar.addMenu("Функции")
+        self.create_func_action = QAction("Создать", self)
+        self.create_func_action.setEnabled(False)
+        self.create_func_action.triggered.connect(self.create_functions)
+        self.assign_func_action = QAction("Назначить", self)
+        self.assign_func_action.setEnabled(False)
+        self.assign_func_action.triggered.connect(self.assign_functions)
+        function_menu.addAction(self.create_func_action)
+        function_menu.addAction(self.assign_func_action)
+
         graph_menu = menuBar.addMenu("График")
         self.filter_action = QAction("Фильтровать", self)
         self.filter_action.setEnabled(False)
@@ -209,13 +219,6 @@ class MainWindow(QMainWindow):
         delete_project.triggered.connect(lambda state: self.delete_prj_folder(name))
         context_menu.addAction(add_data)
         context_menu.addAction(delete_project)
-        context_menu.exec_(QCursor.pos())
-
-    def init_header_context_menu(self, name):
-        context_menu = QMenu(self)
-        set = QAction("Сделать осью абсцисс", self)
-        #set.triggered.connect(lambda state: self.set_x(name))
-        context_menu.addAction(set)
         context_menu.exec_(QCursor.pos())
 
     def set_x(self):
@@ -407,6 +410,14 @@ class MainWindow(QMainWindow):
 
     def create_table(self):
         if self.file_path != "":
+
+            if len(self.data) > 20:
+                length = 20
+                table_data = pd.concat([self.data.head(10), self.data.tail(10)], ignore_index=True)
+            else:
+                length = len(self.data)
+                table_data = self.data
+
             self.x_name = self.data.columns[0]
             self.x = list(self.data[self.x_name])
             self.type_flag = False
@@ -415,13 +426,13 @@ class MainWindow(QMainWindow):
 
             self.clear_table()
             self.table.setColumnCount(len(headers))
-            self.table.setRowCount(len(self.data))
+            self.table.setRowCount(length)
             self.table.setHorizontalHeaderLabels(headers)
             self.incorrect_data = dict.fromkeys(headers, 0)
 
             for i in range(len(headers)):
-                for j in range(len(self.data)):
-                    self.table.setItem(j, i, QTableWidgetItem(str(self.data.iloc[j, i])))
+                for j in range(length):
+                    self.table.setItem(j, i, QTableWidgetItem(str(table_data.iloc[j, i])))
 
             self.table_ready = True
 
@@ -443,6 +454,8 @@ class MainWindow(QMainWindow):
             else:
                 self.conversion_action.setEnabled(True)
                 self.graph_action.setEnabled(True)
+            self.create_func_action.setEnabled(True)
+            self.assign_func_action.setEnabled(True)
 
     def clear_table(self):
         while self.table.rowCount() > 0:
@@ -699,3 +712,10 @@ class MainWindow(QMainWindow):
             h, t = os.path.split(h)
             if path == h:
                 os.rmdir(prj)
+
+    def create_functions(self):
+        self.funcwin = funcwin.FunctionsWindow()
+        self.funcwin.show()
+
+    def assign_functions(self):
+        pass
