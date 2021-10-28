@@ -714,7 +714,7 @@ class MainWindow(QMainWindow):
                 os.rmdir(prj)
 
     def create_functions(self):
-        self.funcwin = funcwin.FunctionsWindow()
+        self.funcwin = funcwin.FunctionsWindow(self)
         self.funcwin.show()
 
     def assign_functions(self):
