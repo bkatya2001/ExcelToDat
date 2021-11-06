@@ -1,5 +1,4 @@
 import os
-
 from PyQt5.QtCore import QSize
 from PyQt5.QtWidgets import QMainWindow, QWidget, QTableWidget, QPushButton, QVBoxLayout, QComboBox, QTableWidgetItem, \
     QHeaderView, QMessageBox
@@ -61,7 +60,7 @@ class FunctionsWindow(QMainWindow):
 
     def save_preset(self):
         flag = True
-        json_string = '{'
+        json_data = {}
         rows = self.table.rowCount()
         for i in range(rows):
             widget = self.table.cellWidget(i, 0)
@@ -73,14 +72,14 @@ class FunctionsWindow(QMainWindow):
             if func == "Замена некорректных данных":
                 try:
                     float(params)
-                    json_string += '"' + str(i) + '"' + ': {' + '"func"' + ':"' + func + '", "params":"' + params + '"},'
+                    json_data[i] = {"func": func, "params": params}
                 except (TypeError, ValueError):
                     QMessageBox.about(self, "Ошибка", "Для этой функции параметром может быть только число")
                     flag = False
                     break
             elif func == "Приведение типов":
                 if params in ["int32", "float32"]:
-                    json_string += '"' + str(i) + '"' + ': {' + '"func"' + ':"' + func + '", "params":"' + params + '"},'
+                    json_data[i] = {"func": func, "params": params}
                 else:
                     QMessageBox.about(self, "Ошибка", "Для этой функции параметром может быть один из предложенных "
                                                       "списков")
@@ -88,14 +87,14 @@ class FunctionsWindow(QMainWindow):
                     break
             elif func == "Фильтрация":
                 if params == "":
-                    json_string += '"' + str(i) + '"' + ': {' + '"func"' + ':"' + func + '", "params":"' + params + '"},'
+                    json_data[i] = {"func": func, "params": params}
                 else:
                     QMessageBox.about(self, "Ошибка", "Для этой функции параметры не нужны")
                     flag = False
                     break
         if flag:
-            json_string = json_string[:-1] + '}'
-            with open(os.path.join(self.main_window.path, self.main_window.current_project, self.main_window.current_test, "preset.json"), "w") as write_file:
-                json.dump(json_string, write_file, ensure_ascii=False)
+            with open(os.path.join(self.main_window.path, self.main_window.current_project,
+                                   self.main_window.current_test, "preset.json"), "w") as write_file:
+                json.dump(json_data, write_file, ensure_ascii=False)
             QMessageBox.about(self, "Создание пресета", "Файл успешно создан")
             self.close()

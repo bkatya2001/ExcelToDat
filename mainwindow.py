@@ -17,6 +17,7 @@ import addwindow as aw
 import columnswindow as cw
 import filterwindow as fw
 import functionswindow as funcwin
+import assignwindow as assignwin
 import threadclass as thread
 
 
@@ -718,4 +719,5 @@ class MainWindow(QMainWindow):
         self.funcwin.show()
 
     def assign_functions(self):
-        pass
+        self.assignwin = assignwin.AssignWindow(self)
+        self.assignwin.show()

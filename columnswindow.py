@@ -10,7 +10,7 @@ class ColumnsWindow(QMainWindow):
 
         self.main_window = main_window
         # Настройка окна
-        self.setMinimumSize(QSize(480, 80))
+        self.setMinimumSize(QSize(600, 100))
         self.setWindowTitle("Изменение порядка столбцов")
 
         self.central_widget = QWidget(self)  # Создаём центральный виджет

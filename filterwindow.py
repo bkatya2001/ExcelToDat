@@ -1,6 +1,5 @@
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QWidget, QTableWidget, QTableWidgetItem
-import start
 from scipy.signal import savgol_filter
 
 
